@@ -24,27 +24,64 @@ MONITORES = [
 COLUNAS_ALUNOS = ["turma", "aluno"]
 COLUNAS_RELATORIOS = ["id", "data", "turma", "monitor", "alunos", "relatorio"]
 
-
 st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 1.5rem;
+        padding-top: 1.2rem;
         padding-bottom: 2rem;
+        max-width: 900px;
     }
+
     .stButton > button {
         width: 100%;
+        border-radius: 12px;
+        min-height: 52px;
+        font-size: 16px;
     }
+
     .caixa {
         padding: 1rem;
         border: 1px solid #E5E7EB;
         border-radius: 12px;
         margin-bottom: 1rem;
+        background-color: #FFFFFF;
+    }
+
+    .titulo-home {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .subtitulo-home {
+        text-align: center;
+        font-size: 1.05rem;
+        color: #555;
+        margin-bottom: 1.5rem;
+    }
+
+    .sucesso-home {
+        padding: 0.9rem 1rem;
+        border-radius: 12px;
+        background-color: #ecfdf3;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+        margin-bottom: 1rem;
+        text-align: center;
+        font-weight: 600;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+if "pagina" not in st.session_state:
+    st.session_state.pagina = "home"
+
+if "mensagem_sucesso" not in st.session_state:
+    st.session_state.mensagem_sucesso = ""
 
 
 def inicializar_arquivo():
@@ -185,8 +222,14 @@ def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
         }]
     )
 
-    df_relatorios = pd.concat([df_relatorios[COLUNAS_RELATORIOS], nova_linha], ignore_index=True)
-    salvar_abas(df_alunos, df_relatorios[COLUNAS_RELATORIOS])
+    df_relatorios_base = (
+        df_relatorios[COLUNAS_RELATORIOS].copy()
+        if not df_relatorios.empty
+        else pd.DataFrame(columns=COLUNAS_RELATORIOS)
+    )
+    df_relatorios_base = pd.concat([df_relatorios_base, nova_linha], ignore_index=True)
+
+    salvar_abas(df_alunos, df_relatorios_base)
 
     return True, f"Relatório {novo_id} salvo com sucesso."
 
@@ -278,19 +321,58 @@ def gerar_pdf_relatorios(df, filtros_texto):
     return buffer
 
 
+def ir_para(nome_pagina):
+    st.session_state.pagina = nome_pagina
+    st.rerun()
+
+
+def botao_voltar():
+    if st.button("⬅️ Voltar para a página inicial"):
+        ir_para("home")
+
+
+def tela_home():
+    st.markdown('<div class="titulo-home">📚 Sistema de Monitoria</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="subtitulo-home">Selecione uma das opções abaixo</div>',
+        unsafe_allow_html=True,
+    )
+
+    if st.session_state.mensagem_sucesso:
+        st.markdown(
+            f'<div class="sucesso-home">{st.session_state.mensagem_sucesso}</div>',
+            unsafe_allow_html=True,
+        )
+        st.session_state.mensagem_sucesso = ""
+
+    st.write("")
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        if st.button("Cadastrar turma", use_container_width=True):
+            ir_para("cadastrar_turma")
+
+    with c2:
+        if st.button("Enviar novo relatório", use_container_width=True):
+            ir_para("cadastrar_relatorio")
+
+    with c3:
+        if st.button("Consultar relatórios enviados", use_container_width=True):
+            ir_para("consultar")
+
+
 inicializar_arquivo()
-
-st.title("📝 Relatórios de Monitoria")
-
-menu = st.sidebar.radio(
-    "Navegação",
-    ["Cadastrar turma", "Cadastrar relatório", "Consultar relatórios"],
-)
 
 df_alunos = carregar_alunos()
 df_relatorios = carregar_relatorios()
+pagina = st.session_state.pagina
 
-if menu == "Cadastrar turma":
+if pagina == "home":
+    tela_home()
+
+elif pagina == "cadastrar_turma":
+    botao_voltar()
+    st.title("Cadastrar turma")
     st.subheader("Cadastro de turma e alunos")
 
     with st.form("form_turma"):
@@ -328,11 +410,14 @@ if menu == "Cadastrar turma":
             options=sorted(df_alunos["turma"].unique().tolist()),
         )
         alunos_turma = df_alunos[df_alunos["turma"] == turma_visualizar]["aluno"].tolist()
-        st.write("**Alunos:**")
+
+        st.write("**Alunos cadastrados nessa turma:**")
         for aluno in alunos_turma:
             st.write(f"- {aluno}")
 
-elif menu == "Cadastrar relatório":
+elif pagina == "cadastrar_relatorio":
+    botao_voltar()
+    st.title("Enviar novo relatório")
     st.subheader("Cadastro de relatório")
 
     turmas_disponiveis = sorted(df_alunos["turma"].unique().tolist()) if not df_alunos.empty else []
@@ -366,13 +451,16 @@ elif menu == "Cadastrar relatório":
             st.session_state[chave_alunos] = []
 
         b1, b2 = st.columns(2)
-        if b1.button("Selecionar todos"):
-            st.session_state[chave_alunos] = alunos_da_turma.copy()
-            st.rerun()
 
-        if b2.button("Selecionar nenhum"):
-            st.session_state[chave_alunos] = []
-            st.rerun()
+        with b1:
+            if st.button("Selecionar todos"):
+                st.session_state[chave_alunos] = alunos_da_turma.copy()
+                st.rerun()
+
+        with b2:
+            if st.button("Selecionar nenhum"):
+                st.session_state[chave_alunos] = []
+                st.rerun()
 
         alunos_selecionados = st.multiselect(
             "Alunos da turma",
@@ -396,12 +484,15 @@ elif menu == "Cadastrar relatório":
                 texto_relatorio=texto_relatorio,
             )
             if ok:
-                st.success(mensagem)
-                st.rerun()
+                st.session_state[chave_alunos] = []
+                st.session_state.mensagem_sucesso = mensagem
+                ir_para("home")
             else:
                 st.error(mensagem)
 
-elif menu == "Consultar relatórios":
+elif pagina == "consultar":
+    botao_voltar()
+    st.title("Consultar relatórios enviados")
     st.subheader("Consulta de relatórios")
 
     if df_relatorios.empty:
@@ -461,6 +552,7 @@ elif menu == "Consultar relatórios":
                 data=pdf_bytes,
                 file_name=f"relatorios_monitoria_{datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
                 mime="application/pdf",
+                use_container_width=True,
             )
 
             st.markdown("---")
@@ -471,12 +563,11 @@ elif menu == "Consultar relatórios":
                 except Exception:
                     data_formatada = str(row["data"])
 
-                with st.container():
-                    st.markdown('<div class="caixa">', unsafe_allow_html=True)
-                    st.write(f"**ID:** {row['id']}")
-                    st.write(f"**Data:** {data_formatada}")
-                    st.write(f"**Turma:** {row['turma']}")
-                    st.write(f"**Monitor:** {row['monitor']}")
-                    st.write(f"**Alunos:** {row['alunos']}")
-                    st.write(f"**Relatório:** {row['relatorio']}")
-                    st.markdown("</div>", unsafe_allow_html=True)
+                st.markdown('<div class="caixa">', unsafe_allow_html=True)
+                st.write(f"**ID:** {row['id']}")
+                st.write(f"**Data:** {data_formatada}")
+                st.write(f"**Turma:** {row['turma']}")
+                st.write(f"**Monitor:** {row['monitor']}")
+                st.write(f"**Alunos:** {row['alunos']}")
+                st.write(f"**Relatório:** {row['relatorio']}")
+                st.markdown("</div>", unsafe_allow_html=True)
