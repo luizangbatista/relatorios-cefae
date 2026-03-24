@@ -1,13 +1,11 @@
 import io
+import os
 from datetime import date, datetime
 
-import gspread
 import pandas as pd
 import streamlit as st
-from google.oauth2.service_account import Credentials
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import simpleSplit
-from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
 
 st.set_page_config(
@@ -16,11 +14,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# =========================
-# CONFIGURAÇÕES GERAIS
-# =========================
-
-SHEET_NAME = "relatorios_monitoria"
+ARQUIVO_DADOS = "dados_monitoria.xlsx"
 
 MONITORES = [
     "Luiza Matemática",
@@ -30,9 +24,6 @@ MONITORES = [
 COLUNAS_ALUNOS = ["turma", "aluno"]
 COLUNAS_RELATORIOS = ["id", "data", "turma", "monitor", "alunos", "relatorio"]
 
-# =========================
-# ESTILO
-# =========================
 
 st.markdown(
     """
@@ -55,103 +46,64 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# =========================
-# GOOGLE SHEETS
-# =========================
 
-@st.cache_resource
-def conectar_planilha():
-    scope = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive",
-    ]
-
-    credentials = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=scope,
-    )
-    client = gspread.authorize(credentials)
-    planilha = client.open(SHEET_NAME)
-    return planilha
+def inicializar_arquivo():
+    if not os.path.exists(ARQUIVO_DADOS):
+        with pd.ExcelWriter(ARQUIVO_DADOS, engine="openpyxl") as writer:
+            pd.DataFrame(columns=COLUNAS_ALUNOS).to_excel(
+                writer, sheet_name="alunos", index=False
+            )
+            pd.DataFrame(columns=COLUNAS_RELATORIOS).to_excel(
+                writer, sheet_name="relatorios", index=False
+            )
 
 
-def obter_ou_criar_aba(planilha, nome_aba, colunas):
+def ler_aba(nome_aba, colunas):
+    inicializar_arquivo()
     try:
-        aba = planilha.worksheet(nome_aba)
-    except gspread.WorksheetNotFound:
-        aba = planilha.add_worksheet(title=nome_aba, rows=1000, cols=max(len(colunas), 6))
-        aba.append_row(colunas)
+        df = pd.read_excel(ARQUIVO_DADOS, sheet_name=nome_aba, engine="openpyxl")
+    except Exception:
+        df = pd.DataFrame(columns=colunas)
 
-    valores = aba.get_all_values()
-    if not valores:
-        aba.append_row(colunas)
-    else:
-        cabecalho = valores[0]
-        if cabecalho != colunas:
-            aba.clear()
-            aba.append_row(colunas)
-
-    return aba
-
-
-@st.cache_resource
-def inicializar_abas():
-    planilha = conectar_planilha()
-    aba_alunos = obter_ou_criar_aba(planilha, "alunos", COLUNAS_ALUNOS)
-    aba_relatorios = obter_ou_criar_aba(planilha, "relatorios", COLUNAS_RELATORIOS)
-    return aba_alunos, aba_relatorios
-
-
-# =========================
-# FUNÇÕES DE DADOS
-# =========================
-
-def ler_aba_como_df(aba, colunas_esperadas):
-    registros = aba.get_all_records()
-    if not registros:
-        return pd.DataFrame(columns=colunas_esperadas)
-
-    df = pd.DataFrame(registros)
-
-    for col in colunas_esperadas:
+    for col in colunas:
         if col not in df.columns:
             df[col] = ""
 
-    df = df[colunas_esperadas].copy()
-    return df
+    return df[colunas].copy()
+
+
+def salvar_abas(df_alunos, df_relatorios):
+    with pd.ExcelWriter(
+        ARQUIVO_DADOS,
+        engine="openpyxl",
+        mode="w",
+    ) as writer:
+        df_alunos.to_excel(writer, sheet_name="alunos", index=False)
+        df_relatorios.to_excel(writer, sheet_name="relatorios", index=False)
 
 
 def carregar_alunos():
-    aba_alunos, _ = inicializar_abas()
-    df = ler_aba_como_df(aba_alunos, COLUNAS_ALUNOS)
-
+    df = ler_aba("alunos", COLUNAS_ALUNOS)
     if not df.empty:
         df["turma"] = df["turma"].astype(str).str.strip()
         df["aluno"] = df["aluno"].astype(str).str.strip()
         df = df[(df["turma"] != "") & (df["aluno"] != "")]
         df = df.drop_duplicates().sort_values(["turma", "aluno"]).reset_index(drop=True)
-
     return df
 
 
 def carregar_relatorios():
-    _, aba_relatorios = inicializar_abas()
-    df = ler_aba_como_df(aba_relatorios, COLUNAS_RELATORIOS)
-
+    df = ler_aba("relatorios", COLUNAS_RELATORIOS)
     if not df.empty:
         for col in COLUNAS_RELATORIOS:
             df[col] = df[col].astype(str).fillna("").str.strip()
-
         df["id_num"] = pd.to_numeric(df["id"], errors="coerce")
         df["data_dt"] = pd.to_datetime(df["data"], errors="coerce")
         df = df.sort_values(["data_dt", "id_num"], ascending=[False, False]).reset_index(drop=True)
-
     return df
 
 
 def cadastrar_turma_alunos(nome_turma, texto_alunos):
-    aba_alunos, _ = inicializar_abas()
-
     turma = nome_turma.strip()
     alunos_lista = [a.strip() for a in texto_alunos.split(";")]
     alunos_lista = [a for a in alunos_lista if a]
@@ -162,11 +114,13 @@ def cadastrar_turma_alunos(nome_turma, texto_alunos):
     if not alunos_lista:
         return False, "Informe pelo menos um aluno separado por ponto e vírgula."
 
-    df_atual = carregar_alunos()
+    df_alunos = carregar_alunos()
+    df_relatorios = ler_aba("relatorios", COLUNAS_RELATORIOS)
+
     existentes = set(
         zip(
-            df_atual["turma"].astype(str).str.strip().tolist(),
-            df_atual["aluno"].astype(str).str.strip().tolist(),
+            df_alunos["turma"].astype(str).str.strip().tolist(),
+            df_alunos["aluno"].astype(str).str.strip().tolist(),
         )
     )
 
@@ -178,13 +132,16 @@ def cadastrar_turma_alunos(nome_turma, texto_alunos):
         if chave in existentes:
             repetidos += 1
             continue
-        novas_linhas.append([turma, aluno])
+        novas_linhas.append({"turma": turma, "aluno": aluno})
         existentes.add(chave)
 
     if not novas_linhas:
         return False, "Todos os alunos informados já estavam cadastrados nessa turma."
 
-    aba_alunos.append_rows(novas_linhas, value_input_option="USER_ENTERED")
+    df_alunos = pd.concat([df_alunos, pd.DataFrame(novas_linhas)], ignore_index=True)
+    df_alunos = df_alunos.drop_duplicates().sort_values(["turma", "aluno"]).reset_index(drop=True)
+    salvar_abas(df_alunos, df_relatorios)
+
     return True, f"{len(novas_linhas)} aluno(s) cadastrado(s) na turma '{turma}'. Repetidos ignorados: {repetidos}."
 
 
@@ -198,7 +155,8 @@ def proximo_id_relatorio(df_relatorios):
 
 
 def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
-    _, aba_relatorios = inicializar_abas()
+    df_alunos = ler_aba("alunos", COLUNAS_ALUNOS)
+    df_relatorios = carregar_relatorios()
 
     turma = str(turma).strip()
     monitor = str(monitor).strip()
@@ -214,19 +172,22 @@ def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
     if not texto_relatorio:
         return False, "Escreva o relatório."
 
-    df_relatorios = carregar_relatorios()
     novo_id = proximo_id_relatorio(df_relatorios)
 
-    linha = [
-        novo_id,
-        data_relatorio.strftime("%Y-%m-%d"),
-        turma,
-        monitor,
-        alunos_texto,
-        texto_relatorio,
-    ]
+    nova_linha = pd.DataFrame(
+        [{
+            "id": novo_id,
+            "data": data_relatorio.strftime("%Y-%m-%d"),
+            "turma": turma,
+            "monitor": monitor,
+            "alunos": alunos_texto,
+            "relatorio": texto_relatorio,
+        }]
+    )
 
-    aba_relatorios.append_row(linha, value_input_option="USER_ENTERED")
+    df_relatorios = pd.concat([df_relatorios[COLUNAS_RELATORIOS], nova_linha], ignore_index=True)
+    salvar_abas(df_alunos, df_relatorios[COLUNAS_RELATORIOS])
+
     return True, f"Relatório {novo_id} salvo com sucesso."
 
 
@@ -259,10 +220,6 @@ def filtrar_relatorios(df, turma=None, aluno=None, monitor=None, data_ini=None, 
     return filtrado
 
 
-# =========================
-# PDF
-# =========================
-
 def gerar_pdf_relatorios(df, filtros_texto):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -280,16 +237,14 @@ def gerar_pdf_relatorios(df, filtros_texto):
 
     def escrever_linha(texto, fonte="Helvetica", tamanho=10, espaco=14):
         nonlocal y
-        c.setFont(fonte, tamanho)
         linhas = simpleSplit(str(texto), fonte, tamanho, largura_texto)
+        c.setFont(fonte, tamanho)
         for linha in linhas:
             if y < 50:
                 nova_pagina()
                 c.setFont(fonte, tamanho)
             c.drawString(margem_esq, y, linha)
             y -= espaco
-
-    c.setTitle("Relatórios de Monitoria")
 
     escrever_linha("Relatórios de Monitoria", "Helvetica-Bold", 16, 18)
     escrever_linha(f"Gerado em: {datetime.now().strftime('%d/%m/%Y %H:%M')}", "Helvetica", 10, 14)
@@ -300,24 +255,19 @@ def gerar_pdf_relatorios(df, filtros_texto):
         escrever_linha("Nenhum relatório encontrado.", "Helvetica-Bold", 11, 16)
     else:
         for _, row in df.iterrows():
-            bloco = [
-                f"ID: {row.get('id', '')}",
-                f"Data: {pd.to_datetime(row.get('data', ''), errors='coerce').strftime('%d/%m/%Y') if pd.notna(pd.to_datetime(row.get('data', ''), errors='coerce')) else row.get('data', '')}",
-                f"Turma: {row.get('turma', '')}",
-                f"Monitor: {row.get('monitor', '')}",
-                f"Alunos: {row.get('alunos', '')}",
-                "Relatório:",
-                f"{row.get('relatorio', '')}",
-            ]
+            try:
+                data_formatada = pd.to_datetime(row.get("data", ""), errors="coerce").strftime("%d/%m/%Y")
+            except Exception:
+                data_formatada = str(row.get("data", ""))
 
             escrever_linha("-" * 90, "Helvetica", 9, 12)
-            escrever_linha(bloco[0], "Helvetica-Bold", 10, 14)
-            escrever_linha(bloco[1], "Helvetica", 10, 14)
-            escrever_linha(bloco[2], "Helvetica", 10, 14)
-            escrever_linha(bloco[3], "Helvetica", 10, 14)
-            escrever_linha(bloco[4], "Helvetica", 10, 14)
-            escrever_linha(bloco[5], "Helvetica-Bold", 10, 14)
-            escrever_linha(bloco[6], "Helvetica", 10, 15)
+            escrever_linha(f"ID: {row.get('id', '')}", "Helvetica-Bold", 10, 14)
+            escrever_linha(f"Data: {data_formatada}", "Helvetica", 10, 14)
+            escrever_linha(f"Turma: {row.get('turma', '')}", "Helvetica", 10, 14)
+            escrever_linha(f"Monitor: {row.get('monitor', '')}", "Helvetica", 10, 14)
+            escrever_linha(f"Alunos: {row.get('alunos', '')}", "Helvetica", 10, 14)
+            escrever_linha("Relatório:", "Helvetica-Bold", 10, 14)
+            escrever_linha(f"{row.get('relatorio', '')}", "Helvetica", 10, 15)
             y -= 8
 
             if y < 80:
@@ -328,27 +278,17 @@ def gerar_pdf_relatorios(df, filtros_texto):
     return buffer
 
 
-# =========================
-# INTERFACE
-# =========================
+inicializar_arquivo()
 
 st.title("📝 Relatórios de Monitoria")
 
 menu = st.sidebar.radio(
     "Navegação",
-    [
-        "Cadastrar turma",
-        "Cadastrar relatório",
-        "Consultar relatórios",
-    ],
+    ["Cadastrar turma", "Cadastrar relatório", "Consultar relatórios"],
 )
 
 df_alunos = carregar_alunos()
 df_relatorios = carregar_relatorios()
-
-# =========================
-# 1) CADASTRAR TURMA
-# =========================
 
 if menu == "Cadastrar turma":
     st.subheader("Cadastro de turma e alunos")
@@ -366,7 +306,6 @@ if menu == "Cadastrar turma":
         ok, mensagem = cadastrar_turma_alunos(nome_turma, texto_alunos)
         if ok:
             st.success(mensagem)
-            st.cache_resource.clear()
             st.rerun()
         else:
             st.error(mensagem)
@@ -393,10 +332,6 @@ if menu == "Cadastrar turma":
         for aluno in alunos_turma:
             st.write(f"- {aluno}")
 
-# =========================
-# 2) CADASTRAR RELATÓRIO
-# =========================
-
 elif menu == "Cadastrar relatório":
     st.subheader("Cadastro de relatório")
 
@@ -405,7 +340,7 @@ elif menu == "Cadastrar relatório":
     if not turmas_disponiveis:
         st.warning("Cadastre pelo menos uma turma antes de criar relatórios.")
     else:
-        col1, col2, col3 = st.columns([1, 1, 1])
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             data_relatorio = st.date_input("Data", value=date.today(), format="DD/MM/YYYY")
@@ -462,14 +397,9 @@ elif menu == "Cadastrar relatório":
             )
             if ok:
                 st.success(mensagem)
-                st.cache_resource.clear()
                 st.rerun()
             else:
                 st.error(mensagem)
-
-# =========================
-# 3) CONSULTAR RELATÓRIOS
-# =========================
 
 elif menu == "Consultar relatórios":
     st.subheader("Consulta de relatórios")
@@ -536,7 +466,6 @@ elif menu == "Consultar relatórios":
             st.markdown("---")
 
             for _, row in df_filtrado.iterrows():
-                data_formatada = ""
                 try:
                     data_formatada = pd.to_datetime(row["data"]).strftime("%d/%m/%Y")
                 except Exception:
