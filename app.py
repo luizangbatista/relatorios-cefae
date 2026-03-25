@@ -99,6 +99,9 @@ if "pagina" not in st.session_state:
 if "mensagem_sucesso" not in st.session_state:
     st.session_state.mensagem_sucesso = ""
 
+if "modo_exclusao" not in st.session_state:
+    st.session_state.modo_exclusao = False
+
 
 def inicializar_arquivo():
     if not os.path.exists(ARQUIVO_DADOS):
@@ -394,22 +397,34 @@ def gerar_docx_relatorios(df, filtros_texto):
     return buffer
 
 
-def deletar_relatorios(indices_para_excluir):
-    if not indices_para_excluir:
-        return False, "Selecione pelo menos um relatório para deletar."
+def deletar_relatorios(df_filtrado, indices_filtrados):
+    if not indices_filtrados:
+        return False, "Selecione pelo menos um relatório para excluir."
 
     df_alunos = ler_aba("alunos", COLUNAS_ALUNOS)
-    df_relatorios = carregar_relatorios()
+    df_relatorios_completo = carregar_relatorios()
 
-    if df_relatorios.empty:
-        return False, "Não há relatórios para deletar."
+    linhas_para_remover = df_filtrado.loc[indices_filtrados, COLUNAS_RELATORIOS].copy()
 
-    df_restante = df_relatorios.drop(index=indices_para_excluir, errors="ignore").copy()
-    df_restante = df_restante[COLUNAS_RELATORIOS].reset_index(drop=True)
+    restantes = df_relatorios_completo.copy()
 
-    salvar_abas(df_alunos, df_restante)
+    for _, linha in linhas_para_remover.iterrows():
+        mascara = (
+            (restantes["data"] == linha["data"]) &
+            (restantes["turma"] == linha["turma"]) &
+            (restantes["monitor"] == linha["monitor"]) &
+            (restantes["alunos"] == linha["alunos"]) &
+            (restantes["relatorio"] == linha["relatorio"])
+        )
 
-    return True, f"{len(indices_para_excluir)} relatório(s) deletado(s) com sucesso."
+        idx_match = restantes[mascara].index
+        if len(idx_match) > 0:
+            restantes = restantes.drop(idx_match[0])
+
+    restantes = restantes[COLUNAS_RELATORIOS].reset_index(drop=True)
+    salvar_abas(df_alunos, restantes)
+
+    return True, f"{len(indices_filtrados)} relatório(s) excluído(s) com sucesso."
 
 
 def ir_para(nome_pagina):
@@ -419,6 +434,7 @@ def ir_para(nome_pagina):
 
 def botao_voltar():
     if st.button("⬅️ Voltar para a página inicial"):
+        st.session_state.modo_exclusao = False
         ir_para("home")
 
 
@@ -441,14 +457,17 @@ def tela_home():
 
     with c1:
         if st.button("Cadastrar turma", use_container_width=True):
+            st.session_state.modo_exclusao = False
             ir_para("cadastrar_turma")
 
     with c2:
         if st.button("Enviar novo relatório", use_container_width=True):
+            st.session_state.modo_exclusao = False
             ir_para("cadastrar_relatorio")
 
     with c3:
         if st.button("Consultar relatórios enviados", use_container_width=True):
+            st.session_state.modo_exclusao = False
             ir_para("consultar")
 
 
@@ -587,6 +606,7 @@ elif pagina == "cadastrar_relatorio":
             if ok:
                 st.session_state[chave_alunos] = []
                 st.session_state.mensagem_sucesso = mensagem
+                st.session_state.modo_exclusao = False
                 ir_para("home")
             else:
                 st.error(mensagem)
@@ -641,6 +661,7 @@ elif pagina == "consultar":
 
         if df_filtrado.empty:
             st.warning("Nenhum relatório corresponde aos filtros selecionados.")
+            st.session_state.modo_exclusao = False
         else:
             st.markdown('<div class="bloco-acoes">', unsafe_allow_html=True)
 
@@ -668,7 +689,22 @@ elif pagina == "consultar":
 
             st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown("### Selecione os relatórios para deletar")
+            c_botao1, c_botao2 = st.columns(2)
+
+            with c_botao1:
+                if not st.session_state.modo_exclusao:
+                    if st.button("Excluir relatórios", use_container_width=True):
+                        st.session_state.modo_exclusao = True
+                        st.rerun()
+
+            with c_botao2:
+                if st.session_state.modo_exclusao:
+                    if st.button("Cancelar exclusão", use_container_width=True):
+                        st.session_state.modo_exclusao = False
+                        st.rerun()
+
+            if st.session_state.modo_exclusao:
+                st.markdown("### Selecione os relatórios para excluir")
 
             indices_para_excluir = []
 
@@ -680,13 +716,13 @@ elif pagina == "consultar":
 
                 st.markdown('<div class="caixa">', unsafe_allow_html=True)
 
-                marcado = st.checkbox(
-                    "Selecionar para deletar",
-                    key=f"deletar_relatorio_{idx}"
-                )
-
-                if marcado:
-                    indices_para_excluir.append(idx)
+                if st.session_state.modo_exclusao:
+                    marcado = st.checkbox(
+                        "Selecionar para excluir",
+                        key=f"excluir_relatorio_{idx}"
+                    )
+                    if marcado:
+                        indices_para_excluir.append(idx)
 
                 st.write(f"**Data:** {data_formatada}")
                 st.write(f"**Turma:** {row['turma']}")
@@ -696,10 +732,16 @@ elif pagina == "consultar":
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
-            if st.button("Deletar relatórios selecionados", use_container_width=True):
-                ok, mensagem = deletar_relatorios(indices_para_excluir)
-                if ok:
-                    st.session_state.mensagem_sucesso = mensagem
-                    ir_para("home")
-                else:
-                    st.error(mensagem)
+            if st.session_state.modo_exclusao:
+                if st.button("Excluir selecionados", use_container_width=True):
+                    ok, mensagem = deletar_relatorios(df_filtrado, indices_para_excluir)
+                    if ok:
+                        for idx in df_filtrado.index:
+                            chave = f"excluir_relatorio_{idx}"
+                            if chave in st.session_state:
+                                del st.session_state[chave]
+                        st.session_state.modo_exclusao = False
+                        st.session_state.mensagem_sucesso = mensagem
+                        ir_para("consultar")
+                    else:
+                        st.error(mensagem)
