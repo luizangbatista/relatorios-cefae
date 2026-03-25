@@ -20,10 +20,10 @@ st.set_page_config(
 # 🔐 SENHA DE ACESSO
 # ==============================
 
-#SENHA_CORRETA = "cefae123"  # ALTERE AQUI
+SENHA_CORRETA = "cefae123"  # ALTERE AQUI
 
-#if "autenticado" not in st.session_state:
-#    st.session_state.autenticado = False
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
 
 # ==============================
 # 🌗 TEMA
@@ -221,8 +221,17 @@ ARQUIVO_DADOS = "dados_monitoria.xlsx"
 ARQUIVO_TIMBRADO = "timbrado.png"
 
 MONITORES = [
-    "Luiza Matemática",
-    "Gabriel Português",
+    
+    "Luiza - Matemática",
+    "Arthur - Matemática",
+    "Raphael - Matemática",
+    "Uill - Português",
+    "Gabriel - Português",
+    "Vinícius - Inglês",
+    "Dayane - História",
+    "Davi - Ciências",
+    "Gabriel - Física",
+    "Maria Eduarda - História/Geografia",
 ]
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
