@@ -36,57 +36,136 @@ st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 1.2rem;
+        padding-top: 1.1rem;
         padding-bottom: 2rem;
-        max-width: 950px;
+        max-width: 920px;
     }
 
-    .stButton > button {
-        width: 100%;
-        border-radius: 12px;
-        min-height: 52px;
-        font-size: 16px;
+    html, body, [data-testid="stAppViewContainer"] {
+        background-color: #0b1220;
     }
 
-    .caixa {
+    [data-testid="stHeader"] {
+        background: transparent;
+    }
+
+    [data-testid="stToolbar"] {
+        right: 0.5rem;
+    }
+
+    div[data-testid="stForm"] {
+        background: #111827;
+        border: 1px solid #243041;
+        border-radius: 16px;
         padding: 1rem;
-        border: 1px solid #E5E7EB;
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        background-color: #FFFFFF;
     }
 
-    .titulo-home {
+    div[data-testid="stVerticalBlock"] > div:has(> div .card-dark) {
+        width: 100%;
+    }
+
+    .card-dark {
+        background: #111827;
+        border: 1px solid #243041;
+        border-radius: 16px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 1px 0 rgba(255,255,255,0.02);
+    }
+
+    .card-soft {
+        background: #0f172a;
+        border: 1px solid #243041;
+        border-radius: 16px;
+        padding: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .home-title {
         text-align: center;
         font-size: 2rem;
         font-weight: 700;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.35rem;
+        color: #f8fafc;
     }
 
-    .subtitulo-home {
+    .home-subtitle {
         text-align: center;
-        font-size: 1.05rem;
-        color: #555;
-        margin-bottom: 1.5rem;
+        font-size: 1rem;
+        color: #cbd5e1;
+        margin-bottom: 1.4rem;
     }
 
-    .sucesso-home {
+    .success-box {
         padding: 0.9rem 1rem;
-        border-radius: 12px;
-        background-color: #ecfdf3;
-        border: 1px solid #bbf7d0;
-        color: #166534;
+        border-radius: 14px;
+        background: #052e1a;
+        border: 1px solid #166534;
+        color: #bbf7d0;
         margin-bottom: 1rem;
         text-align: center;
         font-weight: 600;
     }
 
-    .bloco-acoes {
-        padding: 0.9rem;
-        border: 1px solid #E5E7EB;
-        border-radius: 12px;
-        background: #FAFAFA;
-        margin-bottom: 1rem;
+    .section-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #e5e7eb;
+        margin-bottom: 0.6rem;
+    }
+
+    .muted-text {
+        color: #cbd5e1;
+    }
+
+    .report-line {
+        border-top: 1px solid #243041;
+        margin-top: 0.8rem;
+        margin-bottom: 0.8rem;
+    }
+
+    .stButton > button,
+    .stDownloadButton > button {
+        width: 100%;
+        border-radius: 14px;
+        min-height: 52px;
+        font-size: 16px;
+        background: #111827;
+        color: #f8fafc;
+        border: 1px solid #334155;
+    }
+
+    .stButton > button:hover,
+    .stDownloadButton > button:hover {
+        border-color: #60a5fa;
+        color: #ffffff;
+        background: #172033;
+    }
+
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="input"] > div,
+    div[data-baseweb="textarea"] > div {
+        background-color: #111827 !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+        border-radius: 12px !important;
+    }
+
+    input, textarea {
+        color: #f8fafc !important;
+    }
+
+    label, .stMarkdown, .stText, p, span {
+        color: #e5e7eb;
+    }
+
+    div[data-testid="stDateInput"] > div {
+        background-color: #111827 !important;
+        border-radius: 12px !important;
+    }
+
+    .small-space {
+        height: 0.3rem;
     }
     </style>
     """,
@@ -405,7 +484,6 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
     df_relatorios_completo = carregar_relatorios()
 
     linhas_para_remover = df_filtrado.loc[indices_filtrados, COLUNAS_RELATORIOS].copy()
-
     restantes = df_relatorios_completo.copy()
 
     for _, linha in linhas_para_remover.iterrows():
@@ -416,7 +494,6 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
             (restantes["alunos"] == linha["alunos"]) &
             (restantes["relatorio"] == linha["relatorio"])
         )
-
         idx_match = restantes[mascara].index
         if len(idx_match) > 0:
             restantes = restantes.drop(idx_match[0])
@@ -439,15 +516,15 @@ def botao_voltar():
 
 
 def tela_home():
-    st.markdown('<div class="titulo-home">📚 Sistema de Monitoria</div>', unsafe_allow_html=True)
+    st.markdown('<div class="home-title">📚 Sistema de Monitoria</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="subtitulo-home">Selecione uma das opções abaixo</div>',
+        '<div class="home-subtitle">Selecione uma das opções abaixo</div>',
         unsafe_allow_html=True,
     )
 
     if st.session_state.mensagem_sucesso:
         st.markdown(
-            f'<div class="sucesso-home">{st.session_state.mensagem_sucesso}</div>',
+            f'<div class="success-box">{st.session_state.mensagem_sucesso}</div>',
             unsafe_allow_html=True,
         )
         st.session_state.mensagem_sucesso = ""
@@ -493,16 +570,21 @@ if pagina == "home":
 elif pagina == "cadastrar_turma":
     botao_voltar()
     st.title("Cadastrar turma")
-    st.subheader("Cadastro de turma e alunos")
 
-    with st.form("form_turma"):
-        nome_turma = st.text_input("Nome da turma", placeholder="Ex.: Sexto A")
-        texto_alunos = st.text_area(
-            "Alunos separados por ponto e vírgula",
-            height=180,
-            placeholder="Ex.: Ana Souza; Bruno Lima; Carla Mendes",
-        )
-        enviar_turma = st.form_submit_button("Salvar turma e alunos")
+    with st.container():
+        st.markdown('<div class="card-dark">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Cadastro de turma e alunos</div>', unsafe_allow_html=True)
+
+        with st.form("form_turma"):
+            nome_turma = st.text_input("Nome da turma", placeholder="Ex.: Sexto A")
+            texto_alunos = st.text_area(
+                "Alunos separados por ponto e vírgula",
+                height=180,
+                placeholder="Ex.: Ana Souza; Bruno Lima; Carla Mendes",
+            )
+            enviar_turma = st.form_submit_button("Salvar turma e alunos")
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
     if enviar_turma:
         ok, mensagem = cadastrar_turma_alunos(nome_turma, texto_alunos)
@@ -512,8 +594,8 @@ elif pagina == "cadastrar_turma":
         else:
             st.error(mensagem)
 
-    st.markdown("---")
-    st.subheader("Turmas cadastradas")
+    st.markdown('<div class="card-dark">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Turmas cadastradas</div>', unsafe_allow_html=True)
 
     if df_alunos.empty:
         st.info("Nenhuma turma cadastrada ainda.")
@@ -535,16 +617,20 @@ elif pagina == "cadastrar_turma":
         for aluno in alunos_turma:
             st.write(f"- {aluno}")
 
+    st.markdown("</div>", unsafe_allow_html=True)
+
 elif pagina == "cadastrar_relatorio":
     botao_voltar()
     st.title("Enviar novo relatório")
-    st.subheader("Cadastro de relatório")
 
     turmas_disponiveis = sorted(df_alunos["turma"].unique().tolist()) if not df_alunos.empty else []
 
     if not turmas_disponiveis:
         st.warning("Cadastre pelo menos uma turma antes de criar relatórios.")
     else:
+        st.markdown('<div class="card-dark">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Cadastro de relatório</div>', unsafe_allow_html=True)
+
         col1, col2, col3 = st.columns(3)
 
         with col1:
@@ -611,14 +697,18 @@ elif pagina == "cadastrar_relatorio":
             else:
                 st.error(mensagem)
 
+        st.markdown("</div>", unsafe_allow_html=True)
+
 elif pagina == "consultar":
     botao_voltar()
     st.title("Consultar relatórios enviados")
-    st.subheader("Consulta de relatórios")
 
     if df_relatorios.empty:
         st.info("Nenhum relatório cadastrado ainda.")
     else:
+        st.markdown('<div class="card-dark">', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Filtros</div>', unsafe_allow_html=True)
+
         turmas = ["Todas"] + sorted(df_relatorios["turma"].dropna().astype(str).unique().tolist())
         monitores = ["Todos"] + sorted(df_relatorios["monitor"].dropna().astype(str).unique().tolist())
 
@@ -638,11 +728,19 @@ elif pagina == "consultar":
         with c3:
             monitor_filtro = st.selectbox("Filtrar por monitor", options=monitores)
 
-        c4, c5 = st.columns(2)
-        with c4:
-            data_ini = st.date_input("Data inicial", value=None, format="DD/MM/YYYY")
-        with c5:
-            data_fim = st.date_input("Data final", value=None, format="DD/MM/YYYY")
+        usar_filtro_data = st.checkbox("Filtrar por data")
+
+        if usar_filtro_data:
+            c4, c5 = st.columns(2)
+            with c4:
+                data_ini = st.date_input("Data inicial", value=date.today(), format="DD/MM/YYYY", key="data_ini_consulta")
+            with c5:
+                data_fim = st.date_input("Data final", value=date.today(), format="DD/MM/YYYY", key="data_fim_consulta")
+        else:
+            data_ini = None
+            data_fim = None
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
         df_filtrado = filtrar_relatorios(
             df=df_relatorios,
@@ -657,14 +755,14 @@ elif pagina == "consultar":
             turma_filtro, aluno_filtro, monitor_filtro, data_ini, data_fim
         )
 
+        st.markdown('<div class="card-dark">', unsafe_allow_html=True)
         st.markdown(f"**Total encontrado:** {len(df_filtrado)} relatório(s)")
 
         if df_filtrado.empty:
             st.warning("Nenhum relatório corresponde aos filtros selecionados.")
             st.session_state.modo_exclusao = False
+            st.markdown("</div>", unsafe_allow_html=True)
         else:
-            st.markdown('<div class="bloco-acoes">', unsafe_allow_html=True)
-
             c_download1, c_download2 = st.columns(2)
 
             with c_download1:
@@ -687,8 +785,6 @@ elif pagina == "consultar":
                     use_container_width=True,
                 )
 
-            st.markdown("</div>", unsafe_allow_html=True)
-
             c_botao1, c_botao2 = st.columns(2)
 
             with c_botao1:
@@ -703,8 +799,12 @@ elif pagina == "consultar":
                         st.session_state.modo_exclusao = False
                         st.rerun()
 
+            st.markdown("</div>", unsafe_allow_html=True)
+
             if st.session_state.modo_exclusao:
+                st.markdown('<div class="card-soft">', unsafe_allow_html=True)
                 st.markdown("### Selecione os relatórios para excluir")
+                st.markdown("</div>", unsafe_allow_html=True)
 
             indices_para_excluir = []
 
@@ -714,7 +814,7 @@ elif pagina == "consultar":
                 except Exception:
                     data_formatada = str(row["data"])
 
-                st.markdown('<div class="caixa">', unsafe_allow_html=True)
+                st.markdown('<div class="card-dark">', unsafe_allow_html=True)
 
                 if st.session_state.modo_exclusao:
                     marcado = st.checkbox(
