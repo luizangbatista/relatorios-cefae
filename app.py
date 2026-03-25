@@ -30,7 +30,7 @@ if "autenticado" not in st.session_state:
 # ==============================
 
 if "tema" not in st.session_state:
-    st.session_state.tema = "dark"
+    st.session_state.tema = "light"
 
 
 def alternar_tema():
