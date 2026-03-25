@@ -216,30 +216,7 @@ st.markdown(
 #
 #     st.markdown("</div>", unsafe_allow_html=True)
 #     st.stop()
-#            use_container_width=True,
-#        )
-
-    st.markdown('<div class="card-dark">', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="home-title">🔒 Acesso restrito</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="home-subtitle">Digite a senha para acessar o sistema</div>',
-        unsafe_allow_html=True,
-    )
-
-    senha = st.text_input("Senha", type="password")
-
-    if st.button("Entrar", use_container_width=True):
-        if senha == SENHA_CORRETA:
-            st.session_state.autenticado = True
-            st.rerun()
-        else:
-            st.error("Senha incorreta")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-    st.stop()
+# 
 
 ARQUIVO_DADOS = "dados_monitoria.xlsx"
 ARQUIVO_TIMBRADO = "timbrado.png"
