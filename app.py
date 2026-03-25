@@ -20,10 +20,10 @@ st.set_page_config(
 # 🔐 SENHA DE ACESSO
 # ==============================
 
-SENHA_CORRETA = "cefae123"  # ALTERE AQUI
+# SENHA_CORRETA = "cefae123"  # ALTERE AQUI
 
-if "autenticado" not in st.session_state:
-    st.session_state.autenticado = False
+# if "autenticado" not in st.session_state:
+#     st.session_state.autenticado = False
 
 # ==============================
 # 🌗 TEMA
@@ -186,12 +186,36 @@ st.markdown(
 # 🔐 TELA DE LOGIN
 # ==============================
 
-if not st.session_state.autenticado:
-    topo1, topo2 = st.columns([8, 1])
-    with topo2:
-        st.button(
-            "🌙" if st.session_state.tema == "dark" else "☀️",
-            on_click=alternar_tema,
+# if not st.session_state.autenticado:
+#     topo1, topo2 = st.columns([8, 1])
+#     with topo2:
+#         st.button(
+#             "🌙" if st.session_state.tema == "dark" else "☀️",
+#             on_click=alternar_tema,
+#             use_container_width=True,
+#         )
+#
+#     st.markdown('<div class="card-dark">', unsafe_allow_html=True)
+#     st.markdown(
+#         '<div class="home-title">🔒 Acesso restrito</div>',
+#         unsafe_allow_html=True,
+#     )
+#     st.markdown(
+#         '<div class="home-subtitle">Digite a senha para acessar o sistema</div>',
+#         unsafe_allow_html=True,
+#     )
+#
+#     senha = st.text_input("Senha", type="password")
+#
+#     if st.button("Entrar", use_container_width=True):
+#         if senha == SENHA_CORRETA:
+#             st.session_state.autenticado = True
+#             st.rerun()
+#         else:
+#             st.error("Senha incorreta")
+#
+#     st.markdown("</div>", unsafe_allow_html=True)
+#     st.stop()
             use_container_width=True,
         )
 
@@ -753,7 +777,7 @@ def ir_para(nome_pagina):
 
 
 def sair():
-    st.session_state.autenticado = False
+    # st.session_state.autenticado = False
     st.session_state.pagina = "home"
     st.session_state.modo_exclusao = False
     st.rerun()
