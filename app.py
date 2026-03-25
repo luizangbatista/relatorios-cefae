@@ -221,8 +221,15 @@ ARQUIVO_DADOS = "dados_monitoria.xlsx"
 ARQUIVO_TIMBRADO = "timbrado.png"
 
 MONITORES = [
-    "Luiza Matemática",
-    "Gabriel Português",
+    "Luiza - Matemática",
+    "Arthur - Matemática",
+    "Raphael - Matemática",
+    "Uill - Português",
+    "Gabriel - Português",
+    "Vinícius - Inglês",
+    "Dayane - História",
+    "Davi - Ciências",
+    "Gabriel - Física",
 ]
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
