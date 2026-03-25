@@ -222,16 +222,20 @@ ARQUIVO_TIMBRADO = "timbrado.png"
 
 MONITORES = [
     
-    "Luiza - Matemática",
     "Arthur - Matemática",
-    "Raphael - Matemática",
-    "Uill - Português",
-    "Gabriel - Português",
-    "Vinícius - Inglês",
-    "Dayane - História",
     "Davi - Ciências",
+    "Dayane - História",
     "Gabriel - Física",
-    "Maria Eduarda - História/Geografia",
+    "Gabriel - Português",
+    "Lorraine - 4º ano",
+    "Luiza - Matemática",
+    "Maria Eduarda - 5º ano",
+    "Raphael - Matemática",
+    "Rayanne - 5º ano",
+    "Roberta - 4º ano",
+    "Silvana - Coordenação",
+    "Uill - Português",
+    "Vinícius - Inglês"
 ]
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
