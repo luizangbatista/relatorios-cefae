@@ -60,10 +60,6 @@ st.markdown(
         padding: 1rem;
     }
 
-    div[data-testid="stVerticalBlock"] > div:has(> div .card-dark) {
-        width: 100%;
-    }
-
     .card-dark {
         background: #111827;
         border: 1px solid #243041;
@@ -114,16 +110,6 @@ st.markdown(
         margin-bottom: 0.6rem;
     }
 
-    .muted-text {
-        color: #cbd5e1;
-    }
-
-    .report-line {
-        border-top: 1px solid #243041;
-        margin-top: 0.8rem;
-        margin-bottom: 0.8rem;
-    }
-
     .stButton > button,
     .stDownloadButton > button {
         width: 100%;
@@ -162,10 +148,6 @@ st.markdown(
     div[data-testid="stDateInput"] > div {
         background-color: #111827 !important;
         border-radius: 12px !important;
-    }
-
-    .small-space {
-        height: 0.3rem;
     }
     </style>
     """,
@@ -342,6 +324,30 @@ def filtrar_relatorios(df, turma=None, aluno=None, monitor=None, data_ini=None, 
 
     filtrado = filtrado.sort_values(["data_dt"], ascending=[False]).reset_index(drop=True)
     return filtrado
+
+
+def gerar_texto_filtros_utilizados(turma_filtro, aluno_filtro, monitor_filtro, data_ini, data_fim):
+    filtros = []
+
+    if turma_filtro and turma_filtro != "Todas":
+        filtros.append(f"Turma: {turma_filtro}")
+
+    if aluno_filtro and aluno_filtro != "Todos":
+        filtros.append(f"Aluno: {aluno_filtro}")
+
+    if monitor_filtro and monitor_filtro != "Todos":
+        filtros.append(f"Monitor: {monitor_filtro}")
+
+    if data_ini:
+        filtros.append(f"Data inicial: {data_ini.strftime('%d/%m/%Y')}")
+
+    if data_fim:
+        filtros.append(f"Data final: {data_fim.strftime('%d/%m/%Y')}")
+
+    if not filtros:
+        return "Sem filtros específicos"
+
+    return " | ".join(filtros)
 
 
 def gerar_pdf_relatorios(df, filtros_texto):
@@ -548,16 +554,6 @@ def tela_home():
             ir_para("consultar")
 
 
-def texto_filtros_pdf_docx(turma_filtro, aluno_filtro, monitor_filtro, data_ini, data_fim):
-    return " | ".join([
-        f"Turma: {turma_filtro}",
-        f"Aluno: {aluno_filtro}",
-        f"Monitor: {monitor_filtro}",
-        f"Data inicial: {data_ini.strftime('%d/%m/%Y') if data_ini else '-'}",
-        f"Data final: {data_fim.strftime('%d/%m/%Y') if data_fim else '-'}",
-    ])
-
-
 inicializar_arquivo()
 
 df_alunos = carregar_alunos()
@@ -751,7 +747,7 @@ elif pagina == "consultar":
             data_fim=data_fim,
         )
 
-        filtros_texto = texto_filtros_pdf_docx(
+        filtros_texto = gerar_texto_filtros_utilizados(
             turma_filtro, aluno_filtro, monitor_filtro, data_ini, data_fim
         )
 
