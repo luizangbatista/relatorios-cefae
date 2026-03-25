@@ -16,150 +16,217 @@ st.set_page_config(
     layout="wide",
 )
 
-ARQUIVO_DADOS = "dados_monitoria.xlsx"
+# ==============================
+# 🔐 SENHA DE ACESSO
+# ==============================
 
-MONITORES = [
-    "Luiza - Matemática",
-    "Arthur - Matemática",
-    "Raphael - Matemática",
-    "Uill - Português",
-    "Gabriel - Português",
-    "Vinícius - Inglês",
-    "Dayane - História",
-    "Davi - Ciências",
-    "Gabriel - Física",
-]
+SENHA_CORRETA = "cefae123"  # ALTERE AQUI
 
-COLUNAS_ALUNOS = ["turma", "aluno"]
-COLUNAS_RELATORIOS = ["data", "turma", "monitor", "alunos", "relatorio"]
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
 
-PDF_TITULO = "Relatório CEFAE"
-PDF_FONTE_CORPO = "Helvetica"
-PDF_FONTE_CORPO_NEGRITO = "Helvetica-Bold"
-PDF_TAMANHO_CORPO = 11
-PDF_TAMANHO_CABECALHO = 14
+# ==============================
+# 🌗 TEMA
+# ==============================
+
+if "tema" not in st.session_state:
+    st.session_state.tema = "dark"
+
+
+def alternar_tema():
+    st.session_state.tema = "light" if st.session_state.tema == "dark" else "dark"
+
+
+if st.session_state.tema == "dark":
+    BG = "#0b1220"
+    CARD = "#111827"
+    CARD_SOFT = "#0f172a"
+    BORDER = "#243041"
+    TEXT = "#f8fafc"
+    SUBTEXT = "#cbd5e1"
+    SUCCESS_BG = "#052e1a"
+    SUCCESS_BORDER = "#166534"
+    SUCCESS_TEXT = "#bbf7d0"
+    BUTTON_HOVER = "#172033"
+else:
+    BG = "#f8fafc"
+    CARD = "#ffffff"
+    CARD_SOFT = "#f1f5f9"
+    BORDER = "#dbe4ee"
+    TEXT = "#111827"
+    SUBTEXT = "#4b5563"
+    SUCCESS_BG = "#ecfdf3"
+    SUCCESS_BORDER = "#86efac"
+    SUCCESS_TEXT = "#166534"
+    BUTTON_HOVER = "#eef2f7"
 
 st.markdown(
-    """
+    f"""
     <style>
-    .block-container {
+    .block-container {{
         padding-top: 1.1rem;
         padding-bottom: 2rem;
         max-width: 920px;
-    }
+    }}
 
-    html, body, [data-testid="stAppViewContainer"] {
-        background-color: #0b1220;
-    }
+    html, body, [data-testid="stAppViewContainer"] {{
+        background-color: {BG};
+    }}
 
-    [data-testid="stHeader"] {
+    [data-testid="stHeader"] {{
         background: transparent;
-    }
+    }}
 
-    [data-testid="stToolbar"] {
+    [data-testid="stToolbar"] {{
         right: 0.5rem;
-    }
+    }}
 
-    div[data-testid="stForm"] {
-        background: #111827;
-        border: 1px solid #243041;
+    div[data-testid="stForm"] {{
+        background: {CARD};
+        border: 1px solid {BORDER};
         border-radius: 16px;
         padding: 1rem;
-    }
+    }}
 
-    .card-dark {
-        background: #111827;
-        border: 1px solid #243041;
+    .card-dark {{
+        background: {CARD};
+        border: 1px solid {BORDER};
         border-radius: 16px;
         padding: 1rem;
         margin-bottom: 1rem;
-        box-shadow: 0 1px 0 rgba(255,255,255,0.02);
-    }
+        box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+    }}
 
-    .card-soft {
-        background: #0f172a;
-        border: 1px solid #243041;
+    .card-soft {{
+        background: {CARD_SOFT};
+        border: 1px solid {BORDER};
         border-radius: 16px;
         padding: 0.9rem;
         margin-bottom: 1rem;
-    }
+    }}
 
-    .home-title {
+    .home-title {{
         text-align: center;
         font-size: 2rem;
         font-weight: 700;
         margin-bottom: 0.35rem;
-        color: #f8fafc;
-    }
+        color: {TEXT};
+    }}
 
-    .home-subtitle {
+    .home-subtitle {{
         text-align: center;
         font-size: 1rem;
-        color: #cbd5e1;
+        color: {SUBTEXT};
         margin-bottom: 1.4rem;
-    }
+    }}
 
-    .success-box {
+    .success-box {{
         padding: 0.9rem 1rem;
         border-radius: 14px;
-        background: #052e1a;
-        border: 1px solid #166534;
-        color: #bbf7d0;
+        background: {SUCCESS_BG};
+        border: 1px solid {SUCCESS_BORDER};
+        color: {SUCCESS_TEXT};
         margin-bottom: 1rem;
         text-align: center;
         font-weight: 600;
-    }
+    }}
 
-    .section-title {
+    .section-title {{
         font-size: 1.05rem;
         font-weight: 700;
-        color: #e5e7eb;
+        color: {TEXT};
         margin-bottom: 0.6rem;
-    }
+    }}
 
     .stButton > button,
-    .stDownloadButton > button {
+    .stDownloadButton > button {{
         width: 100%;
         border-radius: 14px;
         min-height: 52px;
         font-size: 16px;
-        background: #111827;
-        color: #f8fafc;
-        border: 1px solid #334155;
-    }
+        background: {CARD};
+        color: {TEXT};
+        border: 1px solid {BORDER};
+    }}
 
     .stButton > button:hover,
-    .stDownloadButton > button:hover {
+    .stDownloadButton > button:hover {{
         border-color: #60a5fa;
-        color: #ffffff;
-        background: #172033;
-    }
+        color: {TEXT};
+        background: {BUTTON_HOVER};
+    }}
 
     div[data-baseweb="select"] > div,
     div[data-baseweb="input"] > div,
-    div[data-baseweb="textarea"] > div {
-        background-color: #111827 !important;
-        border-color: #334155 !important;
-        color: #f8fafc !important;
+    div[data-baseweb="textarea"] > div {{
+        background-color: {CARD} !important;
+        border-color: {BORDER} !important;
+        color: {TEXT} !important;
         border-radius: 12px !important;
-    }
+    }}
 
-    input, textarea {
-        color: #f8fafc !important;
-    }
+    input, textarea {{
+        color: {TEXT} !important;
+    }}
 
-    label, .stMarkdown, .stText, p, span {
-        color: #e5e7eb;
-    }
+    label, .stMarkdown, .stText, p, span, div {{
+        color: {TEXT};
+    }}
 
-    div[data-testid="stDateInput"] > div {
-        background-color: #111827 !important;
+    div[data-testid="stDateInput"] > div {{
+        background-color: {CARD} !important;
         border-radius: 12px !important;
-    }
+    }}
     </style>
     """,
     unsafe_allow_html=True,
 )
+
+# ==============================
+# 🔐 TELA DE LOGIN
+# ==============================
+
+if not st.session_state.autenticado:
+    topo1, topo2 = st.columns([8, 1])
+    with topo2:
+        st.button(
+            "🌙" if st.session_state.tema == "dark" else "☀️",
+            on_click=alternar_tema,
+            use_container_width=True,
+        )
+
+    st.markdown('<div class="card-dark">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="home-title">🔒 Acesso restrito</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="home-subtitle">Digite a senha para acessar o sistema</div>',
+        unsafe_allow_html=True,
+    )
+
+    senha = st.text_input("Senha", type="password")
+
+    if st.button("Entrar", use_container_width=True):
+        if senha == SENHA_CORRETA:
+            st.session_state.autenticado = True
+            st.rerun()
+        else:
+            st.error("Senha incorreta")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
+
+ARQUIVO_DADOS = "dados_monitoria.xlsx"
+ARQUIVO_TIMBRADO = "timbrado.png"
+
+MONITORES = [
+    "Luiza Matemática",
+    "Gabriel Português",
+]
+
+COLUNAS_ALUNOS = ["turma", "aluno"]
+COLUNAS_RELATORIOS = ["data", "turma", "monitor", "alunos", "relatorio"]
 
 if "pagina" not in st.session_state:
     st.session_state.pagina = "home"
@@ -352,7 +419,7 @@ def gerar_texto_filtros_utilizados(turma_filtro, aluno_filtro, monitor_filtro, d
         filtros.append(f"Data final: {data_fim.strftime('%d/%m/%Y')}")
 
     if not filtros:
-        return "Sem filtros específicos"
+        return ""
 
     return " | ".join(filtros)
 
@@ -362,57 +429,175 @@ def gerar_pdf_relatorios(df, filtros_texto):
     c = canvas.Canvas(buffer, pagesize=A4)
 
     largura, altura = A4
-    margem_esq = 45
-    margem_dir = 45
-    y = altura - 45
+
+    # Margens em cm convertidas para pontos
+    margem_esq = 1.5 * 28.35
+    margem_dir = 1.5 * 28.35
+    margem_topo = 4.5 * 28.35
+    margem_base = 4.0 * 28.35
+
     largura_texto = largura - margem_esq - margem_dir
+    y = altura - margem_topo
+
+    fonte_normal = "Helvetica"
+    fonte_negrito = "Helvetica-Bold"
+    tamanho = 11
+
+    def desenhar_timbrado():
+        if os.path.exists(ARQUIVO_TIMBRADO):
+            c.drawImage(
+                ARQUIVO_TIMBRADO,
+                0,
+                0,
+                width=largura,
+                height=altura
+            )
 
     def nova_pagina():
         nonlocal y
         c.showPage()
-        y = altura - 45
+        desenhar_timbrado()
+        y = altura - margem_topo
 
-    def escrever_linha(texto, fonte=PDF_FONTE_CORPO, tamanho=PDF_TAMANHO_CORPO, espaco=16):
+    def escrever_linha_esquerda(texto, fonte=fonte_normal, tamanho_fonte=tamanho, espaco=18):
         nonlocal y
-        linhas = simpleSplit(str(texto), fonte, tamanho, largura_texto)
-        c.setFont(fonte, tamanho)
+        linhas = simpleSplit(str(texto), fonte, tamanho_fonte, largura_texto)
+        c.setFont(fonte, tamanho_fonte)
+
         for linha in linhas:
-            if y < 60:
+            if y < margem_base:
                 nova_pagina()
-                c.setFont(fonte, tamanho)
+                c.setFont(fonte, tamanho_fonte)
             c.drawString(margem_esq, y, linha)
             y -= espaco
 
+    def escrever_linha_centralizada(texto, fonte=fonte_normal, tamanho_fonte=tamanho, espaco=18):
+        nonlocal y
+        linhas = simpleSplit(str(texto), fonte, tamanho_fonte, largura_texto)
+        c.setFont(fonte, tamanho_fonte)
+
+        for linha in linhas:
+            if y < margem_base:
+                nova_pagina()
+                c.setFont(fonte, tamanho_fonte)
+            largura_linha = c.stringWidth(linha, fonte, tamanho_fonte)
+            x = margem_esq + (largura_texto - largura_linha) / 2
+            c.drawString(x, y, linha)
+            y -= espaco
+
+    def escrever_texto_justificado(rotulo, texto, espaco_linha=18):
+        nonlocal y
+
+        rotulo = str(rotulo)
+        texto = str(texto).strip()
+
+        c.setFont(fonte_negrito, tamanho)
+        largura_rotulo = c.stringWidth(rotulo, fonte_negrito, tamanho)
+        largura_disponivel_primeira = largura_texto - largura_rotulo
+
+        palavras = texto.split()
+        linhas = []
+
+        linha_atual = ""
+        c.setFont(fonte_normal, tamanho)
+
+        for palavra in palavras:
+            teste = palavra if not linha_atual else f"{linha_atual} {palavra}"
+            if c.stringWidth(teste, fonte_normal, tamanho) <= largura_disponivel_primeira and not linhas:
+                linha_atual = teste
+            elif c.stringWidth(teste, fonte_normal, tamanho) <= largura_texto:
+                linha_atual = teste
+            else:
+                if linha_atual:
+                    linhas.append(linha_atual)
+                linha_atual = palavra
+
+        if linha_atual:
+            linhas.append(linha_atual)
+
+        if not linhas:
+            linhas = [""]
+
+        for i, linha in enumerate(linhas):
+            if y < margem_base:
+                nova_pagina()
+
+            if i == 0:
+                c.setFont(fonte_negrito, tamanho)
+                c.drawString(margem_esq, y, rotulo)
+                c.setFont(fonte_normal, tamanho)
+                c.drawString(margem_esq + largura_rotulo, y, linha)
+            else:
+                c.setFont(fonte_normal, tamanho)
+                c.drawString(margem_esq, y, linha)
+
+            y -= espaco_linha
+
     def linha_separadora():
         nonlocal y
-        if y < 70:
+        if y < margem_base + 20:
             nova_pagina()
         c.line(margem_esq, y, largura - margem_dir, y)
-        y -= 14
+        y -= 18
 
-    data_geracao = datetime.now().strftime("%d/%m/%Y %H:%M")
+    def escrever_linha_mista(data_str, monitor, turma, espaco=18):
+        nonlocal y
+        if y < margem_base:
+            nova_pagina()
 
-    escrever_linha(PDF_TITULO, PDF_FONTE_CORPO_NEGRITO, PDF_TAMANHO_CABECALHO, 20)
-    escrever_linha(filtros_texto, PDF_FONTE_CORPO, PDF_TAMANHO_CORPO, 16)
-    escrever_linha(data_geracao, PDF_FONTE_CORPO, PDF_TAMANHO_CORPO, 18)
+        x = margem_esq
+
+        c.setFont(fonte_negrito, tamanho)
+        c.drawString(x, y, "Data:")
+        x += c.stringWidth("Data:", fonte_negrito, tamanho) + 4
+
+        c.setFont(fonte_normal, tamanho)
+        c.drawString(x, y, data_str)
+        x += c.stringWidth(data_str, fonte_normal, tamanho) + 14
+
+        c.setFont(fonte_negrito, tamanho)
+        c.drawString(x, y, "Monitor:")
+        x += c.stringWidth("Monitor:", fonte_negrito, tamanho) + 4
+
+        c.setFont(fonte_normal, tamanho)
+        c.drawString(x, y, monitor)
+        x += c.stringWidth(monitor, fonte_normal, tamanho) + 14
+
+        c.setFont(fonte_negrito, tamanho)
+        c.drawString(x, y, "Turma:")
+        x += c.stringWidth("Turma:", fonte_negrito, tamanho) + 4
+
+        c.setFont(fonte_normal, tamanho)
+        c.drawString(x, y, turma)
+
+        y -= espaco
+
+    desenhar_timbrado()
+
+    if filtros_texto:
+        escrever_linha_centralizada(filtros_texto, fonte_normal, tamanho, 18)
+        y -= 8
 
     if df.empty:
         linha_separadora()
-        escrever_linha("Nenhum relatório encontrado.", PDF_FONTE_CORPO_NEGRITO, PDF_TAMANHO_CORPO, 16)
+        escrever_linha_esquerda("Nenhum relatório encontrado.", fonte_negrito, tamanho, 18)
     else:
         for _, row in df.iterrows():
             try:
-                data_formatada = pd.to_datetime(row.get("data", ""), errors="coerce").strftime("%d/%m/%Y")
+                data_formatada = pd.to_datetime(row["data"]).strftime("%d/%m")
             except Exception:
-                data_formatada = str(row.get("data", ""))
+                data_formatada = str(row["data"])
 
             linha_separadora()
-            escrever_linha(f"Data: {data_formatada}")
-            escrever_linha(f"Turma: {row.get('turma', '')}")
-            escrever_linha(f"Monitor: {row.get('monitor', '')}")
-            escrever_linha(f"Alunos: {row.get('alunos', '')}")
-            escrever_linha("Relatório:", PDF_FONTE_CORPO_NEGRITO, PDF_TAMANHO_CORPO, 16)
-            escrever_linha(f"{row.get('relatorio', '')}", PDF_FONTE_CORPO, PDF_TAMANHO_CORPO, 18)
+            escrever_linha_mista(
+                data_formatada,
+                str(row.get("monitor", "")),
+                str(row.get("turma", "")),
+                18
+            )
+            escrever_texto_justificado("Alunos:", str(row.get("alunos", "")), 18)
+            escrever_texto_justificado("Relatório:", str(row.get("relatorio", "")), 18)
+            y -= 8
 
     c.save()
     buffer.seek(0)
@@ -422,25 +607,22 @@ def gerar_pdf_relatorios(df, filtros_texto):
 def gerar_docx_relatorios(df, filtros_texto):
     doc = Document()
 
+    sec = doc.sections[0]
+    sec.top_margin = Pt(127.56)     # 4,5 cm
+    sec.bottom_margin = Pt(113.4)   # 4,0 cm
+    sec.left_margin = Pt(42.52)     # 1,5 cm
+    sec.right_margin = Pt(42.52)    # 1,5 cm
+
     estilo_normal = doc.styles["Normal"]
     estilo_normal.font.name = "Calibri"
     estilo_normal.font.size = Pt(11)
 
-    titulo = doc.add_paragraph()
-    run_titulo = titulo.add_run("Relatório CEFAE")
-    run_titulo.bold = True
-    run_titulo.font.name = "Calibri"
-    run_titulo.font.size = Pt(14)
-
-    p_filtros = doc.add_paragraph()
-    r_filtros = p_filtros.add_run(filtros_texto)
-    r_filtros.font.name = "Calibri"
-    r_filtros.font.size = Pt(11)
-
-    p_data = doc.add_paragraph()
-    r_data = p_data.add_run(datetime.now().strftime("%d/%m/%Y %H:%M"))
-    r_data.font.name = "Calibri"
-    r_data.font.size = Pt(11)
+    if filtros_texto:
+        p_filtros = doc.add_paragraph()
+        p_filtros.alignment = 1
+        r_filtros = p_filtros.add_run(filtros_texto)
+        r_filtros.font.name = "Calibri"
+        r_filtros.font.size = Pt(11)
 
     if df.empty:
         p = doc.add_paragraph()
@@ -451,37 +633,62 @@ def gerar_docx_relatorios(df, filtros_texto):
     else:
         for _, row in df.iterrows():
             try:
-                data_formatada = pd.to_datetime(row.get("data", ""), errors="coerce").strftime("%d/%m/%Y")
+                data_formatada = pd.to_datetime(row.get("data", ""), errors="coerce").strftime("%d/%m")
             except Exception:
                 data_formatada = str(row.get("data", ""))
 
+            p1 = doc.add_paragraph()
+            p1.paragraph_format.line_spacing = 1.5
+
+            r = p1.add_run("Data: ")
+            r.bold = True
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+
+            r = p1.add_run(f"{data_formatada} | ")
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+
+            r = p1.add_run("Monitor: ")
+            r.bold = True
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+
+            r = p1.add_run(f"{row.get('monitor', '')} | ")
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+
+            r = p1.add_run("Turma: ")
+            r.bold = True
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+
+            r = p1.add_run(str(row.get("turma", "")))
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+
+            p2 = doc.add_paragraph()
+            p2.paragraph_format.line_spacing = 1.5
+            r = p2.add_run("Alunos: ")
+            r.bold = True
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+            r = p2.add_run(str(row.get("alunos", "")))
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+
+            p3 = doc.add_paragraph()
+            p3.paragraph_format.line_spacing = 1.5
+            p3.paragraph_format.alignment = 3
+            r = p3.add_run("Relatório: ")
+            r.bold = True
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+            r = p3.add_run(str(row.get("relatorio", "")))
+            r.font.name = "Calibri"
+            r.font.size = Pt(11)
+
             doc.add_paragraph("_" * 70)
-
-            for rotulo, valor in [
-                ("Data", data_formatada),
-                ("Turma", row.get("turma", "")),
-                ("Monitor", row.get("monitor", "")),
-                ("Alunos", row.get("alunos", "")),
-            ]:
-                p = doc.add_paragraph()
-                r1 = p.add_run(f"{rotulo}: ")
-                r1.bold = True
-                r1.font.name = "Calibri"
-                r1.font.size = Pt(11)
-
-                r2 = p.add_run(str(valor))
-                r2.font.name = "Calibri"
-                r2.font.size = Pt(11)
-
-            p_rel = doc.add_paragraph()
-            r_rel_t = p_rel.add_run("Relatório: ")
-            r_rel_t.bold = True
-            r_rel_t.font.name = "Calibri"
-            r_rel_t.font.size = Pt(11)
-
-            r_rel_v = p_rel.add_run(str(row.get("relatorio", "")))
-            r_rel_v.font.name = "Calibri"
-            r_rel_v.font.size = Pt(11)
 
     buffer = io.BytesIO()
     doc.save(buffer)
@@ -522,6 +729,25 @@ def ir_para(nome_pagina):
     st.rerun()
 
 
+def sair():
+    st.session_state.autenticado = False
+    st.session_state.pagina = "home"
+    st.session_state.modo_exclusao = False
+    st.rerun()
+
+
+def topo_app():
+    c1, c2, c3 = st.columns([7, 1, 1])
+    with c2:
+        st.button(
+            "🌙" if st.session_state.tema == "dark" else "☀️",
+            on_click=alternar_tema,
+            use_container_width=True,
+        )
+    with c3:
+        st.button("Sair", on_click=sair, use_container_width=True)
+
+
 def botao_voltar():
     if st.button("⬅️ Voltar para a página inicial"):
         st.session_state.modo_exclusao = False
@@ -529,6 +755,8 @@ def botao_voltar():
 
 
 def tela_home():
+    topo_app()
+
     st.markdown('<div class="home-title">📚 Sistema de Monitoria</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="home-subtitle">Selecione uma das opções abaixo</div>',
@@ -571,6 +799,7 @@ if pagina == "home":
     tela_home()
 
 elif pagina == "cadastrar_turma":
+    topo_app()
     botao_voltar()
     st.title("Cadastrar turma")
 
@@ -623,6 +852,7 @@ elif pagina == "cadastrar_turma":
     st.markdown("</div>", unsafe_allow_html=True)
 
 elif pagina == "cadastrar_relatorio":
+    topo_app()
     botao_voltar()
     st.title("Enviar novo relatório")
 
@@ -703,6 +933,7 @@ elif pagina == "cadastrar_relatorio":
         st.markdown("</div>", unsafe_allow_html=True)
 
 elif pagina == "consultar":
+    topo_app()
     botao_voltar()
     st.title("Consultar relatórios enviados")
 
