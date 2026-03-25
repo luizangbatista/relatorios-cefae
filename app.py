@@ -20,10 +20,10 @@ st.set_page_config(
 # 🔐 SENHA DE ACESSO
 # ==============================
 
-SENHA_CORRETA = "cefae123"  # ALTERE AQUI
+#SENHA_CORRETA = "cefae123"  # ALTERE AQUI
 
-if "autenticado" not in st.session_state:
-    st.session_state.autenticado = False
+#if "autenticado" not in st.session_state:
+#    st.session_state.autenticado = False
 
 # ==============================
 # 🌗 TEMA
@@ -221,15 +221,8 @@ ARQUIVO_DADOS = "dados_monitoria.xlsx"
 ARQUIVO_TIMBRADO = "timbrado.png"
 
 MONITORES = [
-    "Luiza - Matemática",
-    "Arthur - Matemática",
-    "Raphael - Matemática",
-    "Uill - Português",
-    "Gabriel - Português",
-    "Vinícius - Inglês",
-    "Dayane - História",
-    "Davi - Ciências",
-    "Gabriel - Física",
+    "Luiza Matemática",
+    "Gabriel Português",
 ]
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
@@ -437,11 +430,10 @@ def gerar_pdf_relatorios(df, filtros_texto):
 
     largura, altura = A4
 
-    # Margens em cm convertidas para pontos
     margem_esq = 1.5 * 28.35
     margem_dir = 1.5 * 28.35
-    margem_topo = 4.0 * 28.35
-    margem_base = 3.0 * 28.35
+    margem_topo = 4.5 * 28.35
+    margem_base = 4.0 * 28.35
 
     largura_texto = largura - margem_esq - margem_dir
     y = altura - margem_topo
@@ -449,6 +441,8 @@ def gerar_pdf_relatorios(df, filtros_texto):
     fonte_normal = "Helvetica"
     fonte_negrito = "Helvetica-Bold"
     tamanho = 11
+    espacamento_linha = 16.5
+    espacamento_relatorio = 28.35
 
     def desenhar_timbrado():
         if os.path.exists(ARQUIVO_TIMBRADO):
@@ -466,18 +460,6 @@ def gerar_pdf_relatorios(df, filtros_texto):
         desenhar_timbrado()
         y = altura - margem_topo
 
-    def escrever_linha_esquerda(texto, fonte=fonte_normal, tamanho_fonte=tamanho, espaco=18):
-        nonlocal y
-        linhas = simpleSplit(str(texto), fonte, tamanho_fonte, largura_texto)
-        c.setFont(fonte, tamanho_fonte)
-
-        for linha in linhas:
-            if y < margem_base:
-                nova_pagina()
-                c.setFont(fonte, tamanho_fonte)
-            c.drawString(margem_esq, y, linha)
-            y -= espaco
-
     def escrever_linha_centralizada(texto, fonte=fonte_normal, tamanho_fonte=tamanho, espaco=18):
         nonlocal y
         linhas = simpleSplit(str(texto), fonte, tamanho_fonte, largura_texto)
@@ -492,7 +474,7 @@ def gerar_pdf_relatorios(df, filtros_texto):
             c.drawString(x, y, linha)
             y -= espaco
 
-    def escrever_texto_justificado(rotulo, texto, espaco_linha=18):
+    def escrever_texto_justificado(rotulo, texto, espaco_linha=espacamento_linha):
         nonlocal y
 
         rotulo = str(rotulo)
@@ -500,24 +482,24 @@ def gerar_pdf_relatorios(df, filtros_texto):
 
         c.setFont(fonte_negrito, tamanho)
         largura_rotulo = c.stringWidth(rotulo, fonte_negrito, tamanho)
-        largura_disponivel_primeira = largura_texto - largura_rotulo
+        largura_primeira = largura_texto - largura_rotulo
 
         palavras = texto.split()
         linhas = []
-
         linha_atual = ""
+        largura_limite = largura_primeira
+
         c.setFont(fonte_normal, tamanho)
 
         for palavra in palavras:
             teste = palavra if not linha_atual else f"{linha_atual} {palavra}"
-            if c.stringWidth(teste, fonte_normal, tamanho) <= largura_disponivel_primeira and not linhas:
-                linha_atual = teste
-            elif c.stringWidth(teste, fonte_normal, tamanho) <= largura_texto:
+            if c.stringWidth(teste, fonte_normal, tamanho) <= largura_limite:
                 linha_atual = teste
             else:
                 if linha_atual:
                     linhas.append(linha_atual)
                 linha_atual = palavra
+                largura_limite = largura_texto
 
         if linha_atual:
             linhas.append(linha_atual)
@@ -535,76 +517,94 @@ def gerar_pdf_relatorios(df, filtros_texto):
                 c.setFont(fonte_normal, tamanho)
                 c.drawString(margem_esq + largura_rotulo, y, linha)
             else:
-                c.setFont(fonte_normal, tamanho)
-                c.drawString(margem_esq, y, linha)
+                palavras_linha = linha.split()
+                if len(palavras_linha) > 1 and i != len(linhas) - 1:
+                    largura_palavras = sum(c.stringWidth(p, fonte_normal, tamanho) for p in palavras_linha)
+                    espaco_total = largura_texto - largura_palavras
+                    espaco = espaco_total / (len(palavras_linha) - 1)
+                    x = margem_esq
+                    c.setFont(fonte_normal, tamanho)
+                    for palavra in palavras_linha[:-1]:
+                        c.drawString(x, y, palavra)
+                        x += c.stringWidth(palavra, fonte_normal, tamanho) + espaco
+                    c.drawString(x, y, palavras_linha[-1])
+                else:
+                    c.setFont(fonte_normal, tamanho)
+                    c.drawString(margem_esq, y, linha)
 
             y -= espaco_linha
 
-    def linha_separadora():
+    def escrever_linha_mista(data_str, monitor, turma, espaco=espacamento_linha):
         nonlocal y
-        if y < margem_base + 20:
-            nova_pagina()
-        c.line(margem_esq, y, largura - margem_dir, y)
-        y -= 18
 
-    def escrever_linha_mista(data_str, monitor, turma, espaco=18):
-        nonlocal y
-        if y < margem_base:
-            nova_pagina()
+        partes = [
+            ("Data:", True),
+            (f" {data_str} | ", False),
+            ("Monitor:", True),
+            (f" {monitor} | ", False),
+            ("Turma:", True),
+            (f" {turma}", False),
+        ]
 
-        x = margem_esq
+        linhas = []
+        linha_atual = []
+        largura_atual = 0
 
-        c.setFont(fonte_negrito, tamanho)
-        c.drawString(x, y, "Data:")
-        x += c.stringWidth("Data:", fonte_negrito, tamanho) + 4
+        for texto, negrito in partes:
+            fonte = fonte_negrito if negrito else fonte_normal
+            largura_parte = c.stringWidth(texto, fonte, tamanho)
 
-        c.setFont(fonte_normal, tamanho)
-        c.drawString(x, y, data_str)
-        x += c.stringWidth(data_str, fonte_normal, tamanho) + 14
+            if largura_atual + largura_parte <= largura_texto:
+                linha_atual.append((texto, negrito))
+                largura_atual += largura_parte
+            else:
+                if linha_atual:
+                    linhas.append(linha_atual)
+                linha_atual = [(texto, negrito)]
+                largura_atual = largura_parte
 
-        c.setFont(fonte_negrito, tamanho)
-        c.drawString(x, y, "Monitor:")
-        x += c.stringWidth("Monitor:", fonte_negrito, tamanho) + 4
+        if linha_atual:
+            linhas.append(linha_atual)
 
-        c.setFont(fonte_normal, tamanho)
-        c.drawString(x, y, monitor)
-        x += c.stringWidth(monitor, fonte_normal, tamanho) + 14
+        for linha in linhas:
+            if y < margem_base:
+                nova_pagina()
 
-        c.setFont(fonte_negrito, tamanho)
-        c.drawString(x, y, "Turma:")
-        x += c.stringWidth("Turma:", fonte_negrito, tamanho) + 4
+            x = margem_esq
+            for texto, negrito in linha:
+                fonte = fonte_negrito if negrito else fonte_normal
+                c.setFont(fonte, tamanho)
+                c.drawString(x, y, texto)
+                x += c.stringWidth(texto, fonte, tamanho)
 
-        c.setFont(fonte_normal, tamanho)
-        c.drawString(x, y, turma)
-
-        y -= espaco
+            y -= espaco
 
     desenhar_timbrado()
 
     if filtros_texto:
         escrever_linha_centralizada(filtros_texto, fonte_normal, tamanho, 18)
-        y -= 8
+        y -= 10
 
     if df.empty:
-        linha_separadora()
-        escrever_linha_esquerda("Nenhum relatório encontrado.", fonte_negrito, tamanho, 18)
+        c.setFont(fonte_negrito, tamanho)
+        c.drawString(margem_esq, y, "Nenhum relatório encontrado.")
     else:
-        for _, row in df.iterrows():
+        for i, (_, row) in enumerate(df.iterrows()):
             try:
                 data_formatada = pd.to_datetime(row["data"]).strftime("%d/%m")
             except Exception:
                 data_formatada = str(row["data"])
 
-            linha_separadora()
+            if i > 0:
+                y -= espacamento_relatorio
+
             escrever_linha_mista(
                 data_formatada,
                 str(row.get("monitor", "")),
                 str(row.get("turma", "")),
-                18
             )
-            escrever_texto_justificado("Alunos:", str(row.get("alunos", "")), 18)
-            escrever_texto_justificado("Relatório:", str(row.get("relatorio", "")), 18)
-            y -= 8
+            escrever_texto_justificado("Alunos: ", str(row.get("alunos", "")))
+            escrever_texto_justificado("Relatório: ", str(row.get("relatorio", "")))
 
     c.save()
     buffer.seek(0)
@@ -615,10 +615,10 @@ def gerar_docx_relatorios(df, filtros_texto):
     doc = Document()
 
     sec = doc.sections[0]
-    sec.top_margin = Pt(127.56)     # 4,5 cm
-    sec.bottom_margin = Pt(113.4)   # 4,0 cm
-    sec.left_margin = Pt(42.52)     # 1,5 cm
-    sec.right_margin = Pt(42.52)    # 1,5 cm
+    sec.top_margin = Pt(127.56)
+    sec.bottom_margin = Pt(113.4)
+    sec.left_margin = Pt(42.52)
+    sec.right_margin = Pt(42.52)
 
     estilo_normal = doc.styles["Normal"]
     estilo_normal.font.name = "Calibri"
@@ -627,6 +627,7 @@ def gerar_docx_relatorios(df, filtros_texto):
     if filtros_texto:
         p_filtros = doc.add_paragraph()
         p_filtros.alignment = 1
+        p_filtros.paragraph_format.line_spacing = 1.5
         r_filtros = p_filtros.add_run(filtros_texto)
         r_filtros.font.name = "Calibri"
         r_filtros.font.size = Pt(11)
@@ -638,11 +639,15 @@ def gerar_docx_relatorios(df, filtros_texto):
         r.font.name = "Calibri"
         r.font.size = Pt(11)
     else:
-        for _, row in df.iterrows():
+        for i, (_, row) in enumerate(df.iterrows()):
             try:
                 data_formatada = pd.to_datetime(row.get("data", ""), errors="coerce").strftime("%d/%m")
             except Exception:
                 data_formatada = str(row.get("data", ""))
+
+            if i > 0:
+                p_espaco = doc.add_paragraph()
+                p_espaco.paragraph_format.space_before = Pt(28.35)
 
             p1 = doc.add_paragraph()
             p1.paragraph_format.line_spacing = 1.5
@@ -694,8 +699,6 @@ def gerar_docx_relatorios(df, filtros_texto):
             r = p3.add_run(str(row.get("relatorio", "")))
             r.font.name = "Calibri"
             r.font.size = Pt(11)
-
-            doc.add_paragraph("_" * 70)
 
     buffer = io.BytesIO()
     doc.save(buffer)
@@ -777,7 +780,6 @@ def tela_home():
         )
         st.session_state.mensagem_sucesso = ""
 
-    st.write("")
     c1, c2, c3 = st.columns(3)
 
     with c1:
@@ -810,20 +812,19 @@ elif pagina == "cadastrar_turma":
     botao_voltar()
     st.title("Cadastrar turma")
 
-    with st.container():
-        st.markdown('<div class="card-dark">', unsafe_allow_html=True)
-        st.markdown('<div class="section-title">Cadastro de turma e alunos</div>', unsafe_allow_html=True)
+    st.markdown('<div class="card-dark">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Cadastro de turma e alunos</div>', unsafe_allow_html=True)
 
-        with st.form("form_turma"):
-            nome_turma = st.text_input("Nome da turma", placeholder="Ex.: Sexto A")
-            texto_alunos = st.text_area(
-                "Alunos separados por ponto e vírgula",
-                height=180,
-                placeholder="Ex.: Ana Souza; Bruno Lima; Carla Mendes",
-            )
-            enviar_turma = st.form_submit_button("Salvar turma e alunos")
+    with st.form("form_turma"):
+        nome_turma = st.text_input("Nome da turma", placeholder="Ex.: Sexto A")
+        texto_alunos = st.text_area(
+            "Alunos separados por ponto e vírgula",
+            height=180,
+            placeholder="Ex.: Ana Souza; Bruno Lima; Carla Mendes",
+        )
+        enviar_turma = st.form_submit_button("Salvar turma e alunos")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if enviar_turma:
         ok, mensagem = cadastrar_turma_alunos(nome_turma, texto_alunos)
