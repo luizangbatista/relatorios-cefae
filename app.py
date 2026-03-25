@@ -440,7 +440,7 @@ def gerar_pdf_relatorios(df, filtros_texto):
     # Margens em cm convertidas para pontos
     margem_esq = 1.5 * 28.35
     margem_dir = 1.5 * 28.35
-    margem_topo = 3.0 * 28.35
+    margem_topo = 3.5 * 28.35
     margem_base = 3.0 * 28.35
 
     largura_texto = largura - margem_esq - margem_dir
