@@ -20,7 +20,7 @@ st.set_page_config(
 # 🔐 SENHA DE ACESSO
 # ==============================
 
-SENHA_CORRETA = "cefae123"  # ALTERE AQUI
+SENHA_CORRETA = "*cefae0123"  # ALTERE AQUI
 
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
