@@ -216,13 +216,12 @@ st.markdown(
 #
 #     st.markdown("</div>", unsafe_allow_html=True)
 #     st.stop()
-# 
 
 ARQUIVO_DADOS = "dados_monitoria.xlsx"
 ARQUIVO_TIMBRADO = "timbrado.png"
 
 MONITORES = [
-    
+
     "Arthur - Matemática",
     "Davi - Ciências",
     "Dayane - História",
@@ -748,6 +747,39 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
     return True, f"{len(indices_filtrados)} relatório(s) excluído(s) com sucesso."
 
 
+def deletar_turma(nome_turma, excluir_relatorios=False):
+    df_alunos = ler_aba("alunos", COLUNAS_ALUNOS)
+    df_relatorios = ler_aba("relatorios", COLUNAS_RELATORIOS)
+
+    nome_turma = str(nome_turma).strip()
+
+    if not nome_turma:
+        return False, "Selecione uma turma."
+
+    if df_alunos.empty:
+        return False, "Não há turmas cadastradas."
+
+    turmas_existentes = df_alunos["turma"].astype(str).str.strip().unique()
+    if nome_turma not in turmas_existentes:
+        return False, "Turma não encontrada."
+
+    df_alunos = df_alunos[
+        df_alunos["turma"].astype(str).str.strip() != nome_turma
+    ].reset_index(drop=True)
+
+    if excluir_relatorios:
+        df_relatorios = df_relatorios[
+            df_relatorios["turma"].astype(str).str.strip() != nome_turma
+        ].reset_index(drop=True)
+
+    salvar_abas(df_alunos, df_relatorios)
+
+    if excluir_relatorios:
+        return True, f"Turma '{nome_turma}' e seus relatórios foram excluídos com sucesso."
+    else:
+        return True, f"Turma '{nome_turma}' foi excluída com sucesso. Os relatórios antigos foram mantidos."
+
+
 def ir_para(nome_pagina):
     st.session_state.pagina = nome_pagina
     st.rerun()
@@ -870,6 +902,35 @@ elif pagina == "cadastrar_turma":
         st.write("**Alunos cadastrados nessa turma:**")
         for aluno in alunos_turma:
             st.write(f"- {aluno}")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="card-dark">', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Excluir turma</div>', unsafe_allow_html=True)
+
+    turmas_existentes = sorted(df_alunos["turma"].unique().tolist()) if not df_alunos.empty else []
+
+    if not turmas_existentes:
+        st.info("Nenhuma turma disponível para excluir.")
+    else:
+        turma_excluir = st.selectbox(
+            "Selecione a turma para excluir",
+            options=turmas_existentes,
+            key="turma_excluir"
+        )
+
+        excluir_relatorios_tambem = st.checkbox(
+            "Excluir também os relatórios dessa turma",
+            key="check_excluir_relatorios_turma"
+        )
+
+        if st.button("Excluir turma", use_container_width=True):
+            ok, mensagem = deletar_turma(turma_excluir, excluir_relatorios_tambem)
+            if ok:
+                st.success(mensagem)
+                st.rerun()
+            else:
+                st.error(mensagem)
 
     st.markdown("</div>", unsafe_allow_html=True)
 
