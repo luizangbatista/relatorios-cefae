@@ -819,18 +819,6 @@ def tela_home():
         unsafe_allow_html=True,
     )
 
-if os.path.exists(ARQUIVO_DADOS):
-    with open(ARQUIVO_DADOS, "rb") as f:
-        st.download_button(
-            label="⬇️ Baixar backup dos relatórios",
-            data=f,
-            file_name=f"backup_monitoria_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
-else:
-    st.warning("Nenhum dado disponível para backup.")
-
     if st.session_state.mensagem_sucesso:
         st.markdown(
             f'<div class="success-box">{st.session_state.mensagem_sucesso}</div>',
