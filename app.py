@@ -20,7 +20,7 @@ st.set_page_config(
 # 🔐 SENHA DE ACESSO
 # ==============================
 
-SENHA_CORRETA = "*pazebem"  # ALTERE AQUI
+SENHA_CORRETA = "*pazebem"
 
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
@@ -221,7 +221,6 @@ ARQUIVO_DADOS = "dados_monitoria.xlsx"
 ARQUIVO_TIMBRADO = "timbrado.png"
 
 MONITORES = [
-
     "Arthur - Matemática",
     "Davi - Ciências",
     "Dayane - História",
@@ -235,8 +234,49 @@ MONITORES = [
     "Roberta - 4º ano",
     "Silvana - Coordenação",
     "Uill - Português",
-    "Vinícius - Inglês"
+    "Vinícius - Inglês",
 ]
+
+TURMAS_FIXAS = {
+    "6º ano - Tarde": [
+        "ALICE MORAIS DE FREITAS",
+        "ANA ALICE RIBEIRO DE MELO",
+        "ANA GABRIELLE G.DE CAMPOS RIBEIRO",
+        "BERNARDO DE MELLO",
+        "BERNARDO GABRIEL DA SILVA",
+        "BRUNO BRASILEIRO COFFRAN",
+        "DAVI FRANCISCO DOS SANTOS",
+        "EMILLY CARDOSO COGUI",
+        "GABRIEL FEITAS LEAL",
+        "CEFAE TARDE",
+        "IYANLA GABRIELLE DIAS",
+        "JOÃO VICENTE PIERUCCINI",
+        "LUIZA MIRANDA ROSEMBRACK",
+        "MABELLE PIETRA TEIXEIRA RIBEIRO",
+        "MANUELA CARDOSO COTA",
+        "MARIA LUISA DE SOUSA",
+        "MATHEUS VASCONCELOS DIAS",
+        "MIGUEL HOFFNER MOREIRA",
+        "MIGUEL VITORI DIAS",
+        "NATALIA NOGUEIRA SANTANA",
+        "PAMELA GABRIELLE",
+        "PEDRO QUEIROZ BESSA",
+        "SAMUEL DOS SANTOS RAMOS",
+        "THAYLA EMANUELLE RIBEIRO DA MATA",
+        "VITORIA PINHEIRO SANTOS",
+    ],
+    "6º ano - Manhã": [
+        "ANA LUIZA SOUSA LEMES SOARES",
+        "DEBORA LORENA SOUSA LEMES SOARES",
+        "GIOVANNA CORREA DE QUEIROZ",
+        "HELENA CHAVES PIMENTA",
+        "LARISSA ESTEVES PINHEIRO SANTOS",
+        "LAURA TEIXEIRA BAUER",
+        "LUIZA NEVES DOS SANTOS",
+        "PEROLA GONÇALVES OLIVEIRA",
+        "VITÓRIA EMANUELE BARBOSA DO ROSÁRIO",
+    ],
+}
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
 COLUNAS_RELATORIOS = ["data", "turma", "monitor", "alunos", "relatorio"]
@@ -251,12 +291,18 @@ if "modo_exclusao" not in st.session_state:
     st.session_state.modo_exclusao = False
 
 
+def dataframe_alunos_fixo():
+    linhas = []
+    for turma, alunos in TURMAS_FIXAS.items():
+        for aluno in alunos:
+            linhas.append({"turma": turma, "aluno": aluno})
+    return pd.DataFrame(linhas, columns=COLUNAS_ALUNOS)
+
+
 def inicializar_arquivo():
     if not os.path.exists(ARQUIVO_DADOS):
         with pd.ExcelWriter(ARQUIVO_DADOS, engine="openpyxl") as writer:
-            pd.DataFrame(columns=COLUNAS_ALUNOS).to_excel(
-                writer, sheet_name="alunos", index=False
-            )
+            dataframe_alunos_fixo().to_excel(writer, sheet_name="alunos", index=False)
             pd.DataFrame(columns=COLUNAS_RELATORIOS).to_excel(
                 writer, sheet_name="relatorios", index=False
             )
@@ -276,20 +322,14 @@ def ler_aba(nome_aba, colunas):
     return df[colunas].copy()
 
 
-def salvar_abas(df_alunos, df_relatorios):
+def salvar_abas(df_relatorios):
     with pd.ExcelWriter(ARQUIVO_DADOS, engine="openpyxl", mode="w") as writer:
-        df_alunos.to_excel(writer, sheet_name="alunos", index=False)
+        dataframe_alunos_fixo().to_excel(writer, sheet_name="alunos", index=False)
         df_relatorios.to_excel(writer, sheet_name="relatorios", index=False)
 
 
 def carregar_alunos():
-    df = ler_aba("alunos", COLUNAS_ALUNOS)
-    if not df.empty:
-        df["turma"] = df["turma"].astype(str).str.strip()
-        df["aluno"] = df["aluno"].astype(str).str.strip()
-        df = df[(df["turma"] != "") & (df["aluno"] != "")]
-        df = df.drop_duplicates().sort_values(["turma", "aluno"]).reset_index(drop=True)
-    return df
+    return dataframe_alunos_fixo()
 
 
 def carregar_relatorios():
@@ -299,53 +339,12 @@ def carregar_relatorios():
             df[col] = df[col].astype(str).fillna("").str.strip()
         df["data_dt"] = pd.to_datetime(df["data"], errors="coerce")
         df = df.sort_values(["data_dt"], ascending=[False]).reset_index(drop=True)
+    else:
+        df["data_dt"] = pd.to_datetime(pd.Series(dtype="object"))
     return df
 
 
-def cadastrar_turma_alunos(nome_turma, texto_alunos):
-    turma = nome_turma.strip()
-    alunos_lista = [a.strip() for a in texto_alunos.split(";")]
-    alunos_lista = [a for a in alunos_lista if a]
-
-    if not turma:
-        return False, "Informe o nome da turma."
-
-    if not alunos_lista:
-        return False, "Informe pelo menos um aluno separado por ponto e vírgula."
-
-    df_alunos = carregar_alunos()
-    df_relatorios = ler_aba("relatorios", COLUNAS_RELATORIOS)
-
-    existentes = set(
-        zip(
-            df_alunos["turma"].astype(str).str.strip().tolist(),
-            df_alunos["aluno"].astype(str).str.strip().tolist(),
-        )
-    )
-
-    novas_linhas = []
-    repetidos = 0
-
-    for aluno in alunos_lista:
-        chave = (turma, aluno)
-        if chave in existentes:
-            repetidos += 1
-            continue
-        novas_linhas.append({"turma": turma, "aluno": aluno})
-        existentes.add(chave)
-
-    if not novas_linhas:
-        return False, "Todos os alunos informados já estavam cadastrados nessa turma."
-
-    df_alunos = pd.concat([df_alunos, pd.DataFrame(novas_linhas)], ignore_index=True)
-    df_alunos = df_alunos.drop_duplicates().sort_values(["turma", "aluno"]).reset_index(drop=True)
-    salvar_abas(df_alunos, df_relatorios)
-
-    return True, f"{len(novas_linhas)} aluno(s) cadastrado(s) na turma '{turma}'. Repetidos ignorados: {repetidos}."
-
-
 def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
-    df_alunos = ler_aba("alunos", COLUNAS_ALUNOS)
     df_relatorios = carregar_relatorios()
 
     turma = str(turma).strip()
@@ -379,7 +378,7 @@ def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
     )
     df_relatorios_base = pd.concat([df_relatorios_base, nova_linha], ignore_index=True)
 
-    salvar_abas(df_alunos, df_relatorios_base)
+    salvar_abas(df_relatorios_base)
 
     return True, "Relatório salvo com sucesso."
 
@@ -464,7 +463,7 @@ def gerar_pdf_relatorios(df, filtros_texto):
                 0,
                 0,
                 width=largura,
-                height=altura
+                height=altura,
             )
 
     def nova_pagina():
@@ -723,7 +722,6 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
     if not indices_filtrados:
         return False, "Selecione pelo menos um relatório para excluir."
 
-    df_alunos = ler_aba("alunos", COLUNAS_ALUNOS)
     df_relatorios_completo = carregar_relatorios()
 
     linhas_para_remover = df_filtrado.loc[indices_filtrados, COLUNAS_RELATORIOS].copy()
@@ -742,42 +740,9 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
             restantes = restantes.drop(idx_match[0])
 
     restantes = restantes[COLUNAS_RELATORIOS].reset_index(drop=True)
-    salvar_abas(df_alunos, restantes)
+    salvar_abas(restantes)
 
     return True, f"{len(indices_filtrados)} relatório(s) excluído(s) com sucesso."
-
-
-def deletar_turma(nome_turma, excluir_relatorios=False):
-    df_alunos = ler_aba("alunos", COLUNAS_ALUNOS)
-    df_relatorios = ler_aba("relatorios", COLUNAS_RELATORIOS)
-
-    nome_turma = str(nome_turma).strip()
-
-    if not nome_turma:
-        return False, "Selecione uma turma."
-
-    if df_alunos.empty:
-        return False, "Não há turmas cadastradas."
-
-    turmas_existentes = df_alunos["turma"].astype(str).str.strip().unique()
-    if nome_turma not in turmas_existentes:
-        return False, "Turma não encontrada."
-
-    df_alunos = df_alunos[
-        df_alunos["turma"].astype(str).str.strip() != nome_turma
-    ].reset_index(drop=True)
-
-    if excluir_relatorios:
-        df_relatorios = df_relatorios[
-            df_relatorios["turma"].astype(str).str.strip() != nome_turma
-        ].reset_index(drop=True)
-
-    salvar_abas(df_alunos, df_relatorios)
-
-    if excluir_relatorios:
-        return True, f"Turma '{nome_turma}' e seus relatórios foram excluídos com sucesso."
-    else:
-        return True, f"Turma '{nome_turma}' foi excluída com sucesso. Os relatórios antigos foram mantidos."
 
 
 def ir_para(nome_pagina):
@@ -826,19 +791,14 @@ def tela_home():
         )
         st.session_state.mensagem_sucesso = ""
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2 = st.columns(2)
 
     with c1:
-        if st.button("Cadastrar turma", use_container_width=True):
-            st.session_state.modo_exclusao = False
-            ir_para("cadastrar_turma")
-
-    with c2:
         if st.button("Enviar novo relatório", use_container_width=True):
             st.session_state.modo_exclusao = False
             ir_para("cadastrar_relatorio")
 
-    with c3:
+    with c2:
         if st.button("Consultar relatórios enviados", use_container_width=True):
             st.session_state.modo_exclusao = False
             ir_para("consultar")
@@ -853,96 +813,15 @@ pagina = st.session_state.pagina
 if pagina == "home":
     tela_home()
 
-elif pagina == "cadastrar_turma":
-    topo_app()
-    botao_voltar()
-    st.title("Cadastrar turma")
-
-    st.markdown('<div class="card-dark">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Cadastro de turma e alunos</div>', unsafe_allow_html=True)
-
-    with st.form("form_turma"):
-        nome_turma = st.text_input("Nome da turma", placeholder="Ex.: Sexto A")
-        texto_alunos = st.text_area(
-            "Alunos separados por ponto e vírgula",
-            height=180,
-            placeholder="Ex.: Ana Souza; Bruno Lima; Carla Mendes",
-        )
-        enviar_turma = st.form_submit_button("Salvar turma e alunos")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    if enviar_turma:
-        ok, mensagem = cadastrar_turma_alunos(nome_turma, texto_alunos)
-        if ok:
-            st.success(mensagem)
-            st.rerun()
-        else:
-            st.error(mensagem)
-
-    st.markdown('<div class="card-dark">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Turmas cadastradas</div>', unsafe_allow_html=True)
-
-    if df_alunos.empty:
-        st.info("Nenhuma turma cadastrada ainda.")
-    else:
-        resumo = (
-            df_alunos.groupby("turma", as_index=False)
-            .agg(total_alunos=("aluno", "count"))
-            .sort_values("turma")
-        )
-        st.dataframe(resumo, use_container_width=True, hide_index=True)
-
-        turma_visualizar = st.selectbox(
-            "Visualizar alunos da turma",
-            options=sorted(df_alunos["turma"].unique().tolist()),
-        )
-        alunos_turma = df_alunos[df_alunos["turma"] == turma_visualizar]["aluno"].tolist()
-
-        st.write("**Alunos cadastrados nessa turma:**")
-        for aluno in alunos_turma:
-            st.write(f"- {aluno}")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="card-dark">', unsafe_allow_html=True)
-    st.markdown('<div class="section-title">Excluir turma</div>', unsafe_allow_html=True)
-
-    turmas_existentes = sorted(df_alunos["turma"].unique().tolist()) if not df_alunos.empty else []
-
-    if not turmas_existentes:
-        st.info("Nenhuma turma disponível para excluir.")
-    else:
-        turma_excluir = st.selectbox(
-            "Selecione a turma para excluir",
-            options=turmas_existentes,
-            key="turma_excluir"
-        )
-
-        excluir_relatorios_tambem = st.checkbox(
-            "Excluir também os relatórios dessa turma",
-            key="check_excluir_relatorios_turma"
-        )
-
-        if st.button("Excluir turma", use_container_width=True):
-            ok, mensagem = deletar_turma(turma_excluir, excluir_relatorios_tambem)
-            if ok:
-                st.success(mensagem)
-                st.rerun()
-            else:
-                st.error(mensagem)
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
 elif pagina == "cadastrar_relatorio":
     topo_app()
     botao_voltar()
     st.title("Enviar novo relatório")
 
-    turmas_disponiveis = sorted(df_alunos["turma"].unique().tolist()) if not df_alunos.empty else []
+    turmas_disponiveis = list(TURMAS_FIXAS.keys())
 
     if not turmas_disponiveis:
-        st.warning("Cadastre pelo menos uma turma antes de criar relatórios.")
+        st.warning("Nenhuma turma disponível.")
     else:
         st.markdown('<div class="card-dark">', unsafe_allow_html=True)
         st.markdown('<div class="section-title">Cadastro de relatório</div>', unsafe_allow_html=True)
@@ -958,13 +837,7 @@ elif pagina == "cadastrar_relatorio":
         with col3:
             monitor_escolhido = st.selectbox("Monitor", options=MONITORES)
 
-        alunos_da_turma = (
-            df_alunos[df_alunos["turma"] == turma_escolhida]["aluno"]
-            .dropna()
-            .astype(str)
-            .sort_values()
-            .tolist()
-        )
+        alunos_da_turma = sorted(TURMAS_FIXAS.get(turma_escolhida, []))
 
         st.markdown("### Seleção de alunos")
 
@@ -1050,9 +923,19 @@ elif pagina == "consultar":
         if usar_filtro_data:
             c4, c5 = st.columns(2)
             with c4:
-                data_ini = st.date_input("Data inicial", value=date.today(), format="DD/MM/YYYY", key="data_ini_consulta")
+                data_ini = st.date_input(
+                    "Data inicial",
+                    value=date.today(),
+                    format="DD/MM/YYYY",
+                    key="data_ini_consulta",
+                )
             with c5:
-                data_fim = st.date_input("Data final", value=date.today(), format="DD/MM/YYYY", key="data_fim_consulta")
+                data_fim = st.date_input(
+                    "Data final",
+                    value=date.today(),
+                    format="DD/MM/YYYY",
+                    key="data_fim_consulta",
+                )
         else:
             data_ini = None
             data_fim = None
@@ -1136,7 +1019,7 @@ elif pagina == "consultar":
                 if st.session_state.modo_exclusao:
                     marcado = st.checkbox(
                         "Selecionar para excluir",
-                        key=f"excluir_relatorio_{idx}"
+                        key=f"excluir_relatorio_{idx}",
                     )
                     if marcado:
                         indices_para_excluir.append(idx)
