@@ -26,6 +26,7 @@ ARQUIVO_TIMBRADO = "timbrado.png"
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
 COLUNAS_RELATORIOS = ["data", "turma", "monitor", "alunos", "relatorio"]
+COLUNAS_ACESSOS = ["total", "ultimo_acesso"]
 
 MONITORES = [
     "Arthur - Matemática",
@@ -222,6 +223,9 @@ if "mensagem_sucesso" not in st.session_state:
 if "modo_exclusao" not in st.session_state:
     st.session_state.modo_exclusao = False
 
+if "acesso_registrado" not in st.session_state:
+    st.session_state.acesso_registrado = False
+
 # =========================================================
 # TEMA E ESTILO
 # =========================================================
@@ -340,6 +344,15 @@ def aplicar_estilo():
             margin-bottom: 0.6rem;
         }}
 
+        .status-box {{
+            padding: 0.8rem 1rem;
+            border-radius: 12px;
+            background: {cores["CARD_SOFT"]};
+            border: 1px solid {cores["BORDER"]};
+            margin-top: 1rem;
+            text-align: center;
+        }}
+
         .stButton > button,
         .stDownloadButton > button {{
             width: 100%;
@@ -399,6 +412,13 @@ def dataframe_alunos_fixo():
     return pd.DataFrame(linhas, columns=COLUNAS_ALUNOS)
 
 
+def dataframe_acessos_inicial():
+    return pd.DataFrame(
+        [{"total": 0, "ultimo_acesso": ""}],
+        columns=COLUNAS_ACESSOS,
+    )
+
+
 def inicializar_arquivo():
     if os.path.exists(ARQUIVO_DADOS):
         return
@@ -410,6 +430,7 @@ def inicializar_arquivo():
             sheet_name="relatorios",
             index=False,
         )
+        dataframe_acessos_inicial().to_excel(writer, sheet_name="acessos", index=False)
 
 
 def ler_aba(nome_aba, colunas):
@@ -427,16 +448,6 @@ def ler_aba(nome_aba, colunas):
     return df[colunas].copy()
 
 
-def salvar_abas(df_relatorios):
-    with pd.ExcelWriter(ARQUIVO_DADOS, engine="openpyxl", mode="w") as writer:
-        dataframe_alunos_fixo().to_excel(writer, sheet_name="alunos", index=False)
-        df_relatorios.to_excel(writer, sheet_name="relatorios", index=False)
-
-
-def carregar_alunos():
-    return dataframe_alunos_fixo()
-
-
 def carregar_relatorios():
     df = ler_aba("relatorios", COLUNAS_RELATORIOS)
 
@@ -451,6 +462,53 @@ def carregar_relatorios():
     df = df.sort_values("data_dt", ascending=False).reset_index(drop=True)
 
     return df
+
+
+def carregar_acessos():
+    df = ler_aba("acessos", COLUNAS_ACESSOS)
+
+    if df.empty:
+        df = dataframe_acessos_inicial()
+
+    df["total"] = pd.to_numeric(df["total"], errors="coerce").fillna(0).astype(int)
+    df["ultimo_acesso"] = df["ultimo_acesso"].fillna("").astype(str)
+
+    return df
+
+
+def salvar_abas(df_relatorios=None, df_acessos=None):
+    if df_relatorios is None:
+        df_relatorios = carregar_relatorios()[COLUNAS_RELATORIOS].copy()
+
+    if df_acessos is None:
+        df_acessos = carregar_acessos()[COLUNAS_ACESSOS].copy()
+
+    with pd.ExcelWriter(ARQUIVO_DADOS, engine="openpyxl", mode="w") as writer:
+        dataframe_alunos_fixo().to_excel(writer, sheet_name="alunos", index=False)
+        df_relatorios.to_excel(writer, sheet_name="relatorios", index=False)
+        df_acessos.to_excel(writer, sheet_name="acessos", index=False)
+
+
+def carregar_alunos():
+    return dataframe_alunos_fixo()
+
+
+def registrar_acesso():
+    if st.session_state.acesso_registrado:
+        return
+
+    df_acessos = carregar_acessos()
+    agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    if df_acessos.empty:
+        df_acessos = pd.DataFrame([{"total": 1, "ultimo_acesso": agora}], columns=COLUNAS_ACESSOS)
+    else:
+        df_acessos.loc[0, "total"] = int(df_acessos.loc[0, "total"]) + 1
+        df_acessos.loc[0, "ultimo_acesso"] = agora
+
+    salvar_abas(df_acessos=df_acessos)
+    st.session_state.acesso_registrado = True
+
 
 # =========================================================
 # REGRAS DE NEGÓCIO
@@ -491,7 +549,7 @@ def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
         df_base = df_relatorios[COLUNAS_RELATORIOS].copy()
 
     df_base = pd.concat([df_base, nova_linha], ignore_index=True)
-    salvar_abas(df_base)
+    salvar_abas(df_relatorios=df_base)
 
     return True, "Relatório salvo com sucesso."
 
@@ -567,9 +625,10 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
             restantes = restantes.drop(idx_match[0])
 
     restantes = restantes[COLUNAS_RELATORIOS].reset_index(drop=True)
-    salvar_abas(restantes)
+    salvar_abas(df_relatorios=restantes)
 
     return True, f"{len(indices_filtrados)} relatório(s) excluído(s) com sucesso."
+
 
 # =========================================================
 # EXPORTAÇÃO PDF
@@ -769,6 +828,7 @@ def gerar_pdf_relatorios(df, filtros_texto):
     buffer.seek(0)
     return buffer
 
+
 # =========================================================
 # EXPORTAÇÃO DOCX
 # =========================================================
@@ -877,6 +937,7 @@ def gerar_docx_relatorios(df, filtros_texto):
     buffer.seek(0)
     return buffer
 
+
 # =========================================================
 # NAVEGAÇÃO E AÇÕES GERAIS
 # =========================================================
@@ -911,6 +972,7 @@ def botao_voltar():
     if st.button("⬅️ Voltar para a página inicial"):
         st.session_state.modo_exclusao = False
         ir_para("home")
+
 
 # =========================================================
 # TELA DE LOGIN
@@ -947,6 +1009,7 @@ def tela_login():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 # =========================================================
 # TELA HOME
 # =========================================================
@@ -978,6 +1041,21 @@ def tela_home():
         if st.button("Consultar relatórios enviados", use_container_width=True):
             st.session_state.modo_exclusao = False
             ir_para("consultar")
+
+    df_acessos = carregar_acessos()
+    total_acessos = int(df_acessos.loc[0, "total"]) if not df_acessos.empty else 0
+    ultimo_acesso = str(df_acessos.loc[0, "ultimo_acesso"]) if not df_acessos.empty else ""
+
+    st.markdown(
+        f"""
+        <div class="status-box">
+            <strong>Contador de acessos:</strong> {total_acessos}<br>
+            <strong>Último acesso:</strong> {ultimo_acesso if ultimo_acesso else "-"}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 
 # =========================================================
 # TELA CADASTRAR RELATÓRIO
@@ -1059,6 +1137,7 @@ def tela_cadastrar_relatorio():
             st.error(mensagem)
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 
 # =========================================================
 # TELA CONSULTAR RELATÓRIOS
@@ -1236,11 +1315,13 @@ def tela_consultar(df_relatorios):
             else:
                 st.error(mensagem)
 
+
 # =========================================================
 # EXECUÇÃO PRINCIPAL
 # =========================================================
 
 inicializar_arquivo()
+registrar_acesso()
 
 if not st.session_state.autenticado:
     tela_login()
