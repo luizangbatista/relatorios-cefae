@@ -36,7 +36,7 @@ MONITORES = [
     "Lorraine - 4º ano",
     "Luiza - Matemática",
     "Maria Eduarda - 5º ano",
-    "Rafael - Matemática",
+    "Raphael - Matemática",
     "Rayanne - 5º ano",
     "Roberta - 4º ano",
     "Silvana - Coordenação",
@@ -72,7 +72,6 @@ TURMAS_FIXAS = {
         "THAYLA EMANUELLE RIBEIRO DA MATA",
         "VITORIA PINHEIRO SANTOS",
     ],
-
     "6º ano - Manhã": [
         "ANA LUIZA SOUSA LEMES SOARES",
         "DEBORA LORENA SOUSA LEMES SOARES",
@@ -84,7 +83,6 @@ TURMAS_FIXAS = {
         "PEROLA GONÇALVES OLIVEIRA",
         "VITÓRIA EMANUELE BARBOSA DO ROSÁRIO",
     ],
-
     "5º manhã": [
         "ANA LUIZA EZEQUIEL LIMA",
         "HELENA FERNANDES VIEIRA",
@@ -95,7 +93,6 @@ TURMAS_FIXAS = {
         "PEDRO HENRIQUE ALVES CRUZ",
         "GABRIELA VIEIRA CHAVES",
     ],
-
     "4º manhã": [
         "ANA VITORIA BATISTA DA SILVA",
         "EMANUELLY HELENA ALMEIDA LINO",
@@ -108,7 +105,6 @@ TURMAS_FIXAS = {
         "ISABELA DA CUNHA SILVA",
         "LAURA MARCELY VALENTIM",
     ],
-
     "4º ano tarde": [
         "ANA LUÍSA SANTOS DE JESUS",
         "ANA SOPHIA GARRIDO PÁSCOA",
@@ -126,7 +122,6 @@ TURMAS_FIXAS = {
         "VALENTINA BRITO SILVA",
         "VITÓRIA E. MARTINS DOS SANTOS",
     ],
-
     "5º tarde": [
         "ALLAN GUIMARÃES",
         "ANTÔNIO CALDEIRA",
@@ -142,7 +137,6 @@ TURMAS_FIXAS = {
         "MIGUEL F. BARBOSA DE CARVALHO",
         "OTAVIO PIASSI MOTTA",
     ],
-
     "7º tarde": [
         "CLARICE SOARES DA CRUZ E SILVA",
         "ESTHER VIEIRA SANTOS ARAÚJO",
@@ -156,7 +150,6 @@ TURMAS_FIXAS = {
         "SOPHIA RESENDE DE OLIVEIRA",
         "VITÓRIA SANTANA RIBEIRO LOMASSO",
     ],
-
     "8º tarde": [
         "ANA IZABEL RIBEIRO DE MELO",
         "DAVI DE MELO ALVES",
@@ -168,7 +161,6 @@ TURMAS_FIXAS = {
         "LUIZA MARTINS COSTA MENDONÇA",
         "MARIA EDUARDA VALÉRIO COSTA",
     ],
-
     "9º tarde": [
         "ARTHUR CÉSAR VIEIRA",
         "BRUNA PAULA DE ALMIEDA",
@@ -184,7 +176,6 @@ TURMAS_FIXAS = {
         "SOPHIA VITORIA PEREIRA SANTOS",
         "YASMIN CALDEIRA COSTA",
     ],
-
     "1ª série EM": [
         "ARTHUR FÉLIX RIBEIRO",
         "ARTHUR VIEIRA DE SOUZA BENTO",
@@ -203,7 +194,6 @@ TURMAS_FIXAS = {
         "MIGUEL KAIROS FELISBERTO AMORIM",
         "SARAH E. DE MORAIS SANTANA",
     ],
-
     "2ª série EM": [
         "DAVI RAFAEL BORGES LOPES",
         "LUDMILA SANTANA LOMASSO",
@@ -211,7 +201,6 @@ TURMAS_FIXAS = {
         "SOLOS CASTRO CARMO NEVES",
         "STELLA MARTINS COSTA MENDONÇA",
     ],
-}
 }
 
 # =========================================================
@@ -232,7 +221,6 @@ if "mensagem_sucesso" not in st.session_state:
 
 if "modo_exclusao" not in st.session_state:
     st.session_state.modo_exclusao = False
-
 
 # =========================================================
 # TEMA E ESTILO
@@ -399,7 +387,6 @@ def aplicar_estilo():
 
 aplicar_estilo()
 
-
 # =========================================================
 # DADOS
 # =========================================================
@@ -464,7 +451,6 @@ def carregar_relatorios():
     df = df.sort_values("data_dt", ascending=False).reset_index(drop=True)
 
     return df
-
 
 # =========================================================
 # REGRAS DE NEGÓCIO
@@ -584,7 +570,6 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
     salvar_abas(restantes)
 
     return True, f"{len(indices_filtrados)} relatório(s) excluído(s) com sucesso."
-
 
 # =========================================================
 # EXPORTAÇÃO PDF
@@ -784,7 +769,6 @@ def gerar_pdf_relatorios(df, filtros_texto):
     buffer.seek(0)
     return buffer
 
-
 # =========================================================
 # EXPORTAÇÃO DOCX
 # =========================================================
@@ -822,7 +806,9 @@ def gerar_docx_relatorios(df, filtros_texto):
             try:
                 data_convertida = pd.to_datetime(row.get("data", ""), errors="coerce")
                 data_formatada = (
-                    data_convertida.strftime("%d/%m") if pd.notna(data_convertida) else str(row.get("data", ""))
+                    data_convertida.strftime("%d/%m")
+                    if pd.notna(data_convertida)
+                    else str(row.get("data", ""))
                 )
             except Exception:
                 data_formatada = str(row.get("data", ""))
@@ -891,7 +877,6 @@ def gerar_docx_relatorios(df, filtros_texto):
     buffer.seek(0)
     return buffer
 
-
 # =========================================================
 # NAVEGAÇÃO E AÇÕES GERAIS
 # =========================================================
@@ -927,13 +912,12 @@ def botao_voltar():
         st.session_state.modo_exclusao = False
         ir_para("home")
 
-
 # =========================================================
 # TELA DE LOGIN
 # =========================================================
 
 def tela_login():
-    topo1, topo2 = st.columns([8, 1])
+    _, topo2 = st.columns([8, 1])
 
     with topo2:
         st.button(
@@ -962,7 +946,6 @@ def tela_login():
             st.error("Senha incorreta")
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 # =========================================================
 # TELA HOME
@@ -995,7 +978,6 @@ def tela_home():
         if st.button("Consultar relatórios enviados", use_container_width=True):
             st.session_state.modo_exclusao = False
             ir_para("consultar")
-
 
 # =========================================================
 # TELA CADASTRAR RELATÓRIO
@@ -1077,7 +1059,6 @@ def tela_cadastrar_relatorio():
             st.error(mensagem)
 
     st.markdown("</div>", unsafe_allow_html=True)
-
 
 # =========================================================
 # TELA CONSULTAR RELATÓRIOS
@@ -1254,7 +1235,6 @@ def tela_consultar(df_relatorios):
                 ir_para("consultar")
             else:
                 st.error(mensagem)
-
 
 # =========================================================
 # EXECUÇÃO PRINCIPAL
