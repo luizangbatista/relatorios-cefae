@@ -36,7 +36,7 @@ MONITORES = [
     "Lorraine - 4º ano",
     "Luiza - Matemática",
     "Maria Eduarda - 5º ano",
-    "Raphael - Matemática",
+    "Rafael - Matemática",
     "Rayanne - 5º ano",
     "Roberta - 4º ano",
     "Silvana - Coordenação",
