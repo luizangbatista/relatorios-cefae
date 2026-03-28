@@ -1,5 +1,6 @@
 import io
 import os
+import json
 from datetime import date, datetime
 
 import gspread
@@ -418,8 +419,11 @@ def conectar_google_sheets():
         "https://www.googleapis.com/auth/drive",
     ]
 
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
-        "credenciais.json", scope
+    with open("credenciais.json", "r", encoding="utf-8") as arquivo:
+        credenciais_dict = json.load(arquivo)
+
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(
+        credenciais_dict, scope
     )
 
     client = gspread.authorize(creds)
@@ -478,19 +482,22 @@ def registrar_acesso():
     if st.session_state.acesso_registrado:
         return
 
-    planilha = conectar_google_sheets()
-    aba = planilha.worksheet("acessos")
+    try:
+        planilha = conectar_google_sheets()
+        aba = planilha.worksheet("acessos")
 
-    dados = aba.get_all_records()
-    agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        dados = aba.get_all_records()
+        agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    if not dados:
-        aba.update("A2:B2", [[1, agora]])
-    else:
-        total_atual = int(dados[0].get("total", 0) or 0)
-        aba.update("A2:B2", [[total_atual + 1, agora]])
+        if not dados:
+            aba.update("A2:B2", [[1, agora]])
+        else:
+            total_atual = int(dados[0].get("total", 0) or 0)
+            aba.update("A2:B2", [[total_atual + 1, agora]])
 
-    st.session_state.acesso_registrado = True
+        st.session_state.acesso_registrado = True
+    except Exception:
+        pass
 
 
 # =========================================================
@@ -512,20 +519,21 @@ def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
     if not texto_relatorio:
         return False, "Escreva o relatório."
 
-    planilha = conectar_google_sheets()
-    aba = planilha.worksheet("relatorios")
+    try:
+        planilha = conectar_google_sheets()
+        aba = planilha.worksheet("relatorios")
 
-    nova_linha = [
-        data_relatorio.strftime("%Y-%m-%d"),
-        turma,
-        monitor,
-        alunos_texto,
-        texto_relatorio,
-    ]
+        aba.append_row([
+            data_relatorio.strftime("%Y-%m-%d"),
+            turma,
+            monitor,
+            alunos_texto,
+            texto_relatorio,
+        ])
 
-    aba.append_row(nova_linha)
-
-    return True, "Relatório salvo com sucesso."
+        return True, "Relatório salvo com sucesso."
+    except Exception as e:
+        return False, f"Erro ao salvar: {str(e)}"
 
 
 def filtrar_relatorios(df, turma=None, aluno=None, monitor=None, data_ini=None, data_fim=None):
@@ -581,47 +589,50 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
     if not indices_filtrados:
         return False, "Selecione pelo menos um relatório para excluir."
 
-    planilha = conectar_google_sheets()
-    aba = planilha.worksheet("relatorios")
+    try:
+        planilha = conectar_google_sheets()
+        aba = planilha.worksheet("relatorios")
 
-    valores = aba.get_all_values()
+        valores = aba.get_all_values()
 
-    if not valores or len(valores) < 2:
-        return False, "Nenhum relatório encontrado para excluir."
+        if not valores or len(valores) < 2:
+            return False, "Nenhum relatório encontrado para excluir."
 
-    cabecalho = valores[0]
-    linhas = valores[1:]
+        cabecalho = valores[0]
+        linhas = valores[1:]
 
-    df_completo = pd.DataFrame(linhas, columns=cabecalho)
+        df_completo = pd.DataFrame(linhas, columns=cabecalho)
 
-    for col in COLUNAS_RELATORIOS:
-        if col not in df_completo.columns:
-            df_completo[col] = ""
+        for col in COLUNAS_RELATORIOS:
+            if col not in df_completo.columns:
+                df_completo[col] = ""
 
-    df_completo = df_completo[COLUNAS_RELATORIOS].copy()
+        df_completo = df_completo[COLUNAS_RELATORIOS].copy()
 
-    linhas_para_remover = df_filtrado.loc[indices_filtrados, COLUNAS_RELATORIOS].copy()
-    restantes = df_completo.copy()
+        linhas_para_remover = df_filtrado.loc[indices_filtrados, COLUNAS_RELATORIOS].copy()
+        restantes = df_completo.copy()
 
-    for _, linha in linhas_para_remover.iterrows():
-        mascara = (
-            (restantes["data"] == str(linha["data"])) &
-            (restantes["turma"] == str(linha["turma"])) &
-            (restantes["monitor"] == str(linha["monitor"])) &
-            (restantes["alunos"] == str(linha["alunos"])) &
-            (restantes["relatorio"] == str(linha["relatorio"]))
-        )
-        idx_match = restantes[mascara].index
-        if len(idx_match) > 0:
-            restantes = restantes.drop(idx_match[0])
+        for _, linha in linhas_para_remover.iterrows():
+            mascara = (
+                (restantes["data"] == str(linha["data"])) &
+                (restantes["turma"] == str(linha["turma"])) &
+                (restantes["monitor"] == str(linha["monitor"])) &
+                (restantes["alunos"] == str(linha["alunos"])) &
+                (restantes["relatorio"] == str(linha["relatorio"]))
+            )
+            idx_match = restantes[mascara].index
+            if len(idx_match) > 0:
+                restantes = restantes.drop(idx_match[0])
 
-    aba.clear()
-    aba.append_row(COLUNAS_RELATORIOS)
+        aba.clear()
+        aba.append_row(COLUNAS_RELATORIOS)
 
-    if not restantes.empty:
-        aba.append_rows(restantes[COLUNAS_RELATORIOS].values.tolist())
+        if not restantes.empty:
+            aba.append_rows(restantes[COLUNAS_RELATORIOS].values.tolist())
 
-    return True, f"{len(indices_filtrados)} relatório(s) excluído(s) com sucesso."
+        return True, f"{len(indices_filtrados)} relatório(s) excluído(s) com sucesso."
+    except Exception as e:
+        return False, f"Erro ao excluir: {str(e)}"
 
 
 # =========================================================
@@ -1036,9 +1047,13 @@ def tela_home():
             st.session_state.modo_exclusao = False
             ir_para("consultar")
 
-    df_acessos = carregar_acessos()
-    total_acessos = int(df_acessos.loc[0, "total"]) if not df_acessos.empty else 0
-    ultimo_acesso = str(df_acessos.loc[0, "ultimo_acesso"]) if not df_acessos.empty else ""
+    try:
+        df_acessos = carregar_acessos()
+        total_acessos = int(df_acessos.loc[0, "total"]) if not df_acessos.empty else 0
+        ultimo_acesso = str(df_acessos.loc[0, "ultimo_acesso"]) if not df_acessos.empty else ""
+    except Exception:
+        total_acessos = 0
+        ultimo_acesso = ""
 
     st.markdown(
         f"""
@@ -1330,4 +1345,3 @@ elif pagina == "cadastrar_relatorio":
     tela_cadastrar_relatorio()
 elif pagina == "consultar":
     tela_consultar(df_relatorios)
-
