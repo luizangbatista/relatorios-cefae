@@ -3,6 +3,8 @@ import os
 from datetime import date, datetime
 
 import pandas as pd
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 import streamlit as st
 from docx import Document
 from docx.shared import Pt
@@ -56,7 +58,6 @@ TURMAS_FIXAS = {
         "DAVI FRANCISCO DOS SANTOS",
         "EMILLY CARDOSO COGUI",
         "GABRIEL FEITAS LEAL",
-        "CEFAE TARDE",
         "IYANLA GABRIELLE DIAS",
         "JOÃO VICENTE PIERUCCINI",
         "LUIZA MIRANDA ROSEMBRACK",
@@ -463,6 +464,20 @@ def carregar_relatorios():
 
     return df
 
+def conectar_google_sheets():
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive",
+    ]
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name(
+        "credenciais.json", scope
+    )
+
+    client = gspread.authorize(creds)
+    planilha = client.open("dados_monitoria")
+
+    return planilha
 
 def carregar_acessos():
     df = ler_aba("acessos", COLUNAS_ACESSOS)
