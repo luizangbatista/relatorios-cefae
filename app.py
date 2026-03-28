@@ -2,12 +2,12 @@ import io
 import os
 from datetime import date, datetime
 
-import pandas as pd
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+import pandas as pd
 import streamlit as st
 from docx import Document
 from docx.shared import Pt
+from oauth2client.service_account import ServiceAccountCredentials
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import simpleSplit
 from reportlab.pdfgen import canvas
@@ -23,7 +23,6 @@ st.set_page_config(
 )
 
 SENHA_CORRETA = "*pazebem"
-ARQUIVO_DADOS = "dados_monitoria.xlsx"
 ARQUIVO_TIMBRADO = "timbrado.png"
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
@@ -413,57 +412,6 @@ def dataframe_alunos_fixo():
     return pd.DataFrame(linhas, columns=COLUNAS_ALUNOS)
 
 
-def dataframe_acessos_inicial():
-    return pd.DataFrame(
-        [{"total": 0, "ultimo_acesso": ""}],
-        columns=COLUNAS_ACESSOS,
-    )
-
-
-def inicializar_arquivo():
-    if os.path.exists(ARQUIVO_DADOS):
-        return
-
-    with pd.ExcelWriter(ARQUIVO_DADOS, engine="openpyxl") as writer:
-        dataframe_alunos_fixo().to_excel(writer, sheet_name="alunos", index=False)
-        pd.DataFrame(columns=COLUNAS_RELATORIOS).to_excel(
-            writer,
-            sheet_name="relatorios",
-            index=False,
-        )
-        dataframe_acessos_inicial().to_excel(writer, sheet_name="acessos", index=False)
-
-
-def ler_aba(nome_aba, colunas):
-    inicializar_arquivo()
-
-    try:
-        df = pd.read_excel(ARQUIVO_DADOS, sheet_name=nome_aba, engine="openpyxl")
-    except Exception:
-        df = pd.DataFrame(columns=colunas)
-
-    for col in colunas:
-        if col not in df.columns:
-            df[col] = ""
-
-    return df[colunas].copy()
-
-
-def carregar_relatorios():
-    df = ler_aba("relatorios", COLUNAS_RELATORIOS)
-
-    if df.empty:
-        df["data_dt"] = pd.to_datetime(pd.Series(dtype="object"))
-        return df
-
-    for col in COLUNAS_RELATORIOS:
-        df[col] = df[col].fillna("").astype(str).str.strip()
-
-    df["data_dt"] = pd.to_datetime(df["data"], errors="coerce")
-    df = df.sort_values("data_dt", ascending=False).reset_index(drop=True)
-
-    return df
-
 def conectar_google_sheets():
     scope = [
         "https://spreadsheets.google.com/feeds",
@@ -479,29 +427,47 @@ def conectar_google_sheets():
 
     return planilha
 
-def carregar_acessos():
-    df = ler_aba("acessos", COLUNAS_ACESSOS)
+
+def carregar_relatorios():
+    planilha = conectar_google_sheets()
+    aba = planilha.worksheet("relatorios")
+
+    dados = aba.get_all_records()
+    df = pd.DataFrame(dados)
 
     if df.empty:
-        df = dataframe_acessos_inicial()
+        df = pd.DataFrame(columns=COLUNAS_RELATORIOS)
+        df["data_dt"] = pd.to_datetime(pd.Series(dtype="object"))
+        return df
+
+    for col in COLUNAS_RELATORIOS:
+        if col not in df.columns:
+            df[col] = ""
+        df[col] = df[col].fillna("").astype(str).str.strip()
+
+    df["data_dt"] = pd.to_datetime(df["data"], errors="coerce")
+    return df.sort_values("data_dt", ascending=False).reset_index(drop=True)
+
+
+def carregar_acessos():
+    planilha = conectar_google_sheets()
+    aba = planilha.worksheet("acessos")
+
+    dados = aba.get_all_records()
+
+    if not dados:
+        return pd.DataFrame([{"total": 0, "ultimo_acesso": ""}], columns=COLUNAS_ACESSOS)
+
+    df = pd.DataFrame(dados)
+
+    for col in COLUNAS_ACESSOS:
+        if col not in df.columns:
+            df[col] = ""
 
     df["total"] = pd.to_numeric(df["total"], errors="coerce").fillna(0).astype(int)
     df["ultimo_acesso"] = df["ultimo_acesso"].fillna("").astype(str)
 
-    return df
-
-
-def salvar_abas(df_relatorios=None, df_acessos=None):
-    if df_relatorios is None:
-        df_relatorios = carregar_relatorios()[COLUNAS_RELATORIOS].copy()
-
-    if df_acessos is None:
-        df_acessos = carregar_acessos()[COLUNAS_ACESSOS].copy()
-
-    with pd.ExcelWriter(ARQUIVO_DADOS, engine="openpyxl", mode="w") as writer:
-        dataframe_alunos_fixo().to_excel(writer, sheet_name="alunos", index=False)
-        df_relatorios.to_excel(writer, sheet_name="relatorios", index=False)
-        df_acessos.to_excel(writer, sheet_name="acessos", index=False)
+    return df[COLUNAS_ACESSOS].copy()
 
 
 def carregar_alunos():
@@ -512,16 +478,18 @@ def registrar_acesso():
     if st.session_state.acesso_registrado:
         return
 
-    df_acessos = carregar_acessos()
+    planilha = conectar_google_sheets()
+    aba = planilha.worksheet("acessos")
+
+    dados = aba.get_all_records()
     agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
-    if df_acessos.empty:
-        df_acessos = pd.DataFrame([{"total": 1, "ultimo_acesso": agora}], columns=COLUNAS_ACESSOS)
+    if not dados:
+        aba.update("A2:B2", [[1, agora]])
     else:
-        df_acessos.loc[0, "total"] = int(df_acessos.loc[0, "total"]) + 1
-        df_acessos.loc[0, "ultimo_acesso"] = agora
+        total_atual = int(dados[0].get("total", 0) or 0)
+        aba.update("A2:B2", [[total_atual + 1, agora]])
 
-    salvar_abas(df_acessos=df_acessos)
     st.session_state.acesso_registrado = True
 
 
@@ -544,27 +512,18 @@ def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
     if not texto_relatorio:
         return False, "Escreva o relatório."
 
-    df_relatorios = carregar_relatorios()
+    planilha = conectar_google_sheets()
+    aba = planilha.worksheet("relatorios")
 
-    nova_linha = pd.DataFrame(
-        [
-            {
-                "data": data_relatorio.strftime("%Y-%m-%d"),
-                "turma": turma,
-                "monitor": monitor,
-                "alunos": alunos_texto,
-                "relatorio": texto_relatorio,
-            }
-        ]
-    )
+    nova_linha = [
+        data_relatorio.strftime("%Y-%m-%d"),
+        turma,
+        monitor,
+        alunos_texto,
+        texto_relatorio,
+    ]
 
-    if df_relatorios.empty:
-        df_base = pd.DataFrame(columns=COLUNAS_RELATORIOS)
-    else:
-        df_base = df_relatorios[COLUNAS_RELATORIOS].copy()
-
-    df_base = pd.concat([df_base, nova_linha], ignore_index=True)
-    salvar_abas(df_relatorios=df_base)
+    aba.append_row(nova_linha)
 
     return True, "Relatório salvo com sucesso."
 
@@ -622,25 +581,45 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
     if not indices_filtrados:
         return False, "Selecione pelo menos um relatório para excluir."
 
-    df_completo = carregar_relatorios()
+    planilha = conectar_google_sheets()
+    aba = planilha.worksheet("relatorios")
+
+    valores = aba.get_all_values()
+
+    if not valores or len(valores) < 2:
+        return False, "Nenhum relatório encontrado para excluir."
+
+    cabecalho = valores[0]
+    linhas = valores[1:]
+
+    df_completo = pd.DataFrame(linhas, columns=cabecalho)
+
+    for col in COLUNAS_RELATORIOS:
+        if col not in df_completo.columns:
+            df_completo[col] = ""
+
+    df_completo = df_completo[COLUNAS_RELATORIOS].copy()
+
     linhas_para_remover = df_filtrado.loc[indices_filtrados, COLUNAS_RELATORIOS].copy()
     restantes = df_completo.copy()
 
     for _, linha in linhas_para_remover.iterrows():
         mascara = (
-            (restantes["data"] == linha["data"]) &
-            (restantes["turma"] == linha["turma"]) &
-            (restantes["monitor"] == linha["monitor"]) &
-            (restantes["alunos"] == linha["alunos"]) &
-            (restantes["relatorio"] == linha["relatorio"])
+            (restantes["data"] == str(linha["data"])) &
+            (restantes["turma"] == str(linha["turma"])) &
+            (restantes["monitor"] == str(linha["monitor"])) &
+            (restantes["alunos"] == str(linha["alunos"])) &
+            (restantes["relatorio"] == str(linha["relatorio"]))
         )
-
         idx_match = restantes[mascara].index
         if len(idx_match) > 0:
             restantes = restantes.drop(idx_match[0])
 
-    restantes = restantes[COLUNAS_RELATORIOS].reset_index(drop=True)
-    salvar_abas(df_relatorios=restantes)
+    aba.clear()
+    aba.append_row(COLUNAS_RELATORIOS)
+
+    if not restantes.empty:
+        aba.append_rows(restantes[COLUNAS_RELATORIOS].values.tolist())
 
     return True, f"{len(indices_filtrados)} relatório(s) excluído(s) com sucesso."
 
@@ -1335,7 +1314,6 @@ def tela_consultar(df_relatorios):
 # EXECUÇÃO PRINCIPAL
 # =========================================================
 
-inicializar_arquivo()
 registrar_acesso()
 
 if not st.session_state.autenticado:
@@ -1352,3 +1330,4 @@ elif pagina == "cadastrar_relatorio":
     tela_cadastrar_relatorio()
 elif pagina == "consultar":
     tela_consultar(df_relatorios)
+
