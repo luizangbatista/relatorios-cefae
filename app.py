@@ -405,6 +405,10 @@ def conectar_google_sheets():
     client = gspread.authorize(creds)
     return client.open_by_key(ID_PLANILHA)
 
+st.write("Tem secrets?", "gcp_service_account" in st.secrets)
+st.write("Project ID:", st.secrets["gcp_service_account"]["project_id"])
+st.write("Client email:", st.secrets["gcp_service_account"]["client_email"])
+st.write("Private key começa com:", st.secrets["gcp_service_account"]["private_key"][:30])
 
 def carregar_relatorios():
     planilha = conectar_google_sheets()
