@@ -1,6 +1,5 @@
 import io
 import os
-import json
 from datetime import date, datetime
 
 import gspread
@@ -8,7 +7,7 @@ import pandas as pd
 import streamlit as st
 from docx import Document
 from docx.shared import Pt
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import simpleSplit
 from reportlab.pdfgen import canvas
@@ -25,6 +24,11 @@ st.set_page_config(
 
 SENHA_CORRETA = "*pazebem"
 ARQUIVO_TIMBRADO = "timbrado.png"
+
+# COLE AQUI O ID DA SUA PLANILHA
+# Exemplo de URL:
+# https://docs.google.com/spreadsheets/d/1m6zSOCCcV-Dz7BKBrEaHk77Vlq2AOyqLlh6adqDAXQY/edit?usp=drivesdk
+ID_PLANILHA = "1m6zSOCCcV-Dz7BKBrEaHk77Vlq2AOyqLlh6adqDAXQY/edit?usp=drivesdk"
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
 COLUNAS_RELATORIOS = ["data", "turma", "monitor", "alunos", "relatorio"]
@@ -205,10 +209,6 @@ TURMAS_FIXAS = {
     ],
 }
 
-# =========================================================
-# SESSION STATE
-# =========================================================
-
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
@@ -227,9 +227,6 @@ if "modo_exclusao" not in st.session_state:
 if "acesso_registrado" not in st.session_state:
     st.session_state.acesso_registrado = False
 
-# =========================================================
-# TEMA E ESTILO
-# =========================================================
 
 def alternar_tema():
     st.session_state.tema = "light" if st.session_state.tema == "dark" else "dark"
@@ -266,7 +263,6 @@ def obter_cores_tema():
 
 def aplicar_estilo():
     cores = obter_cores_tema()
-
     st.markdown(
         f"""
         <style>
@@ -275,26 +271,21 @@ def aplicar_estilo():
             padding-bottom: 2rem;
             max-width: 920px;
         }}
-
         html, body, [data-testid="stAppViewContainer"] {{
             background-color: {cores["BG"]};
         }}
-
         [data-testid="stHeader"] {{
             background: transparent;
         }}
-
         [data-testid="stToolbar"] {{
             right: 0.5rem;
         }}
-
         div[data-testid="stForm"] {{
             background: {cores["CARD"]};
             border: 1px solid {cores["BORDER"]};
             border-radius: 16px;
             padding: 1rem;
         }}
-
         .card-dark {{
             background: {cores["CARD"]};
             border: 1px solid {cores["BORDER"]};
@@ -303,7 +294,6 @@ def aplicar_estilo():
             margin-bottom: 1rem;
             box-shadow: 0 1px 0 rgba(0,0,0,0.02);
         }}
-
         .card-soft {{
             background: {cores["CARD_SOFT"]};
             border: 1px solid {cores["BORDER"]};
@@ -311,7 +301,6 @@ def aplicar_estilo():
             padding: 0.9rem;
             margin-bottom: 1rem;
         }}
-
         .home-title {{
             text-align: center;
             font-size: 2rem;
@@ -319,14 +308,12 @@ def aplicar_estilo():
             margin-bottom: 0.35rem;
             color: {cores["TEXT"]};
         }}
-
         .home-subtitle {{
             text-align: center;
             font-size: 1rem;
             color: {cores["SUBTEXT"]};
             margin-bottom: 1.4rem;
         }}
-
         .success-box {{
             padding: 0.9rem 1rem;
             border-radius: 14px;
@@ -337,14 +324,12 @@ def aplicar_estilo():
             text-align: center;
             font-weight: 600;
         }}
-
         .section-title {{
             font-size: 1.05rem;
             font-weight: 700;
             color: {cores["TEXT"]};
             margin-bottom: 0.6rem;
         }}
-
         .status-box {{
             padding: 0.8rem 1rem;
             border-radius: 12px;
@@ -353,7 +338,6 @@ def aplicar_estilo():
             margin-top: 1rem;
             text-align: center;
         }}
-
         .stButton > button,
         .stDownloadButton > button {{
             width: 100%;
@@ -364,14 +348,12 @@ def aplicar_estilo():
             color: {cores["TEXT"]};
             border: 1px solid {cores["BORDER"]};
         }}
-
         .stButton > button:hover,
         .stDownloadButton > button:hover {{
             border-color: #60a5fa;
             color: {cores["TEXT"]};
             background: {cores["BUTTON_HOVER"]};
         }}
-
         div[data-baseweb="select"] > div,
         div[data-baseweb="input"] > div,
         div[data-baseweb="textarea"] > div {{
@@ -380,15 +362,12 @@ def aplicar_estilo():
             color: {cores["TEXT"]} !important;
             border-radius: 12px !important;
         }}
-
         input, textarea {{
             color: {cores["TEXT"]} !important;
         }}
-
         label, .stMarkdown, .stText, p, span, div {{
             color: {cores["TEXT"]};
         }}
-
         div[data-testid="stDateInput"] > div {{
             background-color: {cores["CARD"]} !important;
             border-radius: 12px !important;
@@ -401,10 +380,6 @@ def aplicar_estilo():
 
 aplicar_estilo()
 
-# =========================================================
-# DADOS
-# =========================================================
-
 def dataframe_alunos_fixo():
     linhas = []
     for turma, alunos in TURMAS_FIXAS.items():
@@ -414,28 +389,26 @@ def dataframe_alunos_fixo():
 
 
 def conectar_google_sheets():
-    scope = [
-        "https://spreadsheets.google.com/feeds",
+    if ID_PLANILHA == "COLE_AQUI_O_ID_DA_PLANILHA":
+        raise ValueError("Preencha o ID_PLANILHA com o ID da sua planilha do Google Sheets.")
+
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
     ]
 
-    with open("credenciais.json", "r", encoding="utf-8") as arquivo:
-        credenciais_dict = json.load(arquivo)
-
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(
-        credenciais_dict, scope
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scopes,
     )
 
     client = gspread.authorize(creds)
-    planilha = client.open("dados_monitoria")
-
-    return planilha
+    return client.open_by_key(ID_PLANILHA)
 
 
 def carregar_relatorios():
     planilha = conectar_google_sheets()
     aba = planilha.worksheet("relatorios")
-
     dados = aba.get_all_records()
     df = pd.DataFrame(dados)
 
@@ -456,21 +429,18 @@ def carregar_relatorios():
 def carregar_acessos():
     planilha = conectar_google_sheets()
     aba = planilha.worksheet("acessos")
-
     dados = aba.get_all_records()
 
     if not dados:
         return pd.DataFrame([{"total": 0, "ultimo_acesso": ""}], columns=COLUNAS_ACESSOS)
 
     df = pd.DataFrame(dados)
-
     for col in COLUNAS_ACESSOS:
         if col not in df.columns:
             df[col] = ""
 
     df["total"] = pd.to_numeric(df["total"], errors="coerce").fillna(0).astype(int)
     df["ultimo_acesso"] = df["ultimo_acesso"].fillna("").astype(str)
-
     return df[COLUNAS_ACESSOS].copy()
 
 
@@ -485,7 +455,6 @@ def registrar_acesso():
     try:
         planilha = conectar_google_sheets()
         aba = planilha.worksheet("acessos")
-
         dados = aba.get_all_records()
         agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
 
@@ -499,10 +468,6 @@ def registrar_acesso():
     except Exception:
         pass
 
-
-# =========================================================
-# REGRAS DE NEGÓCIO
-# =========================================================
 
 def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
     turma = str(turma).strip()
@@ -522,7 +487,6 @@ def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
     try:
         planilha = conectar_google_sheets()
         aba = planilha.worksheet("relatorios")
-
         aba.append_row([
             data_relatorio.strftime("%Y-%m-%d"),
             turma,
@@ -530,7 +494,6 @@ def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
             alunos_texto,
             texto_relatorio,
         ])
-
         return True, "Relatório salvo com sucesso."
     except Exception as e:
         return False, f"Erro ao salvar: {str(e)}"
@@ -592,7 +555,6 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
     try:
         planilha = conectar_google_sheets()
         aba = planilha.worksheet("relatorios")
-
         valores = aba.get_all_values()
 
         if not valores or len(valores) < 2:
@@ -600,7 +562,6 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
 
         cabecalho = valores[0]
         linhas = valores[1:]
-
         df_completo = pd.DataFrame(linhas, columns=cabecalho)
 
         for col in COLUNAS_RELATORIOS:
@@ -608,7 +569,6 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
                 df_completo[col] = ""
 
         df_completo = df_completo[COLUNAS_RELATORIOS].copy()
-
         linhas_para_remover = df_filtrado.loc[indices_filtrados, COLUNAS_RELATORIOS].copy()
         restantes = df_completo.copy()
 
@@ -635,10 +595,6 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
         return False, f"Erro ao excluir: {str(e)}"
 
 
-# =========================================================
-# EXPORTAÇÃO PDF
-# =========================================================
-
 def gerar_pdf_relatorios(df, filtros_texto):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
@@ -660,13 +616,7 @@ def gerar_pdf_relatorios(df, filtros_texto):
 
     def desenhar_timbrado():
         if os.path.exists(ARQUIVO_TIMBRADO):
-            c.drawImage(
-                ARQUIVO_TIMBRADO,
-                0,
-                0,
-                width=largura,
-                height=altura,
-            )
+            c.drawImage(ARQUIVO_TIMBRADO, 0, 0, width=largura, height=altura)
 
     def nova_pagina():
         nonlocal y
@@ -676,7 +626,6 @@ def gerar_pdf_relatorios(df, filtros_texto):
 
     def escrever_linha_centralizada(texto, fonte=fonte_normal, tamanho_fonte=tamanho, espaco=18):
         nonlocal y
-
         linhas = simpleSplit(str(texto), fonte, tamanho_fonte, largura_texto)
         c.setFont(fonte, tamanho_fonte)
 
@@ -730,16 +679,13 @@ def gerar_pdf_relatorios(df, filtros_texto):
             if i == 0:
                 c.setFont(fonte_negrito, tamanho)
                 c.drawString(margem_esq, y, rotulo)
-
                 c.setFont(fonte_normal, tamanho)
                 c.drawString(margem_esq + largura_rotulo, y, linha)
             else:
                 palavras_linha = linha.split()
 
                 if len(palavras_linha) > 1 and i != len(linhas) - 1:
-                    largura_palavras = sum(
-                        c.stringWidth(p, fonte_normal, tamanho) for p in palavras_linha
-                    )
+                    largura_palavras = sum(c.stringWidth(p, fonte_normal, tamanho) for p in palavras_linha)
                     espaco_total = largura_texto - largura_palavras
                     espaco = espaco_total / (len(palavras_linha) - 1)
 
@@ -821,11 +767,7 @@ def gerar_pdf_relatorios(df, filtros_texto):
             if i > 0:
                 y -= espacamento_relatorio
 
-            escrever_linha_mista(
-                data_formatada,
-                str(row.get("monitor", "")),
-                str(row.get("turma", "")),
-            )
+            escrever_linha_mista(data_formatada, str(row.get("monitor", "")), str(row.get("turma", "")))
             escrever_texto_justificado("Alunos: ", str(row.get("alunos", "")))
             escrever_texto_justificado("Relatório: ", str(row.get("relatorio", "")))
 
@@ -833,10 +775,6 @@ def gerar_pdf_relatorios(df, filtros_texto):
     buffer.seek(0)
     return buffer
 
-
-# =========================================================
-# EXPORTAÇÃO DOCX
-# =========================================================
 
 def gerar_docx_relatorios(df, filtros_texto):
     doc = Document()
@@ -855,7 +793,6 @@ def gerar_docx_relatorios(df, filtros_texto):
         p_filtros = doc.add_paragraph()
         p_filtros.alignment = 1
         p_filtros.paragraph_format.line_spacing = 1.5
-
         r_filtros = p_filtros.add_run(filtros_texto)
         r_filtros.font.name = "Calibri"
         r_filtros.font.size = Pt(11)
@@ -870,11 +807,7 @@ def gerar_docx_relatorios(df, filtros_texto):
         for i, (_, row) in enumerate(df.iterrows()):
             try:
                 data_convertida = pd.to_datetime(row.get("data", ""), errors="coerce")
-                data_formatada = (
-                    data_convertida.strftime("%d/%m")
-                    if pd.notna(data_convertida)
-                    else str(row.get("data", ""))
-                )
+                data_formatada = data_convertida.strftime("%d/%m") if pd.notna(data_convertida) else str(row.get("data", ""))
             except Exception:
                 data_formatada = str(row.get("data", ""))
 
@@ -943,10 +876,6 @@ def gerar_docx_relatorios(df, filtros_texto):
     return buffer
 
 
-# =========================================================
-# NAVEGAÇÃO E AÇÕES GERAIS
-# =========================================================
-
 def ir_para(nome_pagina):
     st.session_state.pagina = nome_pagina
     st.rerun()
@@ -979,10 +908,6 @@ def botao_voltar():
         ir_para("home")
 
 
-# =========================================================
-# TELA DE LOGIN
-# =========================================================
-
 def tela_login():
     _, topo2 = st.columns([8, 1])
 
@@ -994,14 +919,8 @@ def tela_login():
         )
 
     st.markdown('<div class="card-dark">', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="home-title">🔒 Acesso restrito</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="home-subtitle">Digite a senha para acessar o sistema</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="home-title">🔒 Acesso restrito</div>', unsafe_allow_html=True)
+    st.markdown('<div class="home-subtitle">Digite a senha para acessar o sistema</div>', unsafe_allow_html=True)
 
     senha = st.text_input("Senha", type="password")
 
@@ -1015,24 +934,14 @@ def tela_login():
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-# =========================================================
-# TELA HOME
-# =========================================================
-
 def tela_home():
     topo_app()
 
     st.markdown('<div class="home-title">📚 Sistema de Monitoria</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="home-subtitle">Selecione uma das opções abaixo</div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<div class="home-subtitle">Selecione uma das opções abaixo</div>', unsafe_allow_html=True)
 
     if st.session_state.mensagem_sucesso:
-        st.markdown(
-            f'<div class="success-box">{st.session_state.mensagem_sucesso}</div>',
-            unsafe_allow_html=True,
-        )
+        st.markdown(f'<div class="success-box">{st.session_state.mensagem_sucesso}</div>', unsafe_allow_html=True)
         st.session_state.mensagem_sucesso = ""
 
     c1, c2 = st.columns(2)
@@ -1056,19 +965,15 @@ def tela_home():
         ultimo_acesso = ""
 
     st.markdown(
-        f"""
+        f'''
         <div class="status-box">
             <strong>Contador de acessos:</strong> {total_acessos}<br>
             <strong>Último acesso:</strong> {ultimo_acesso if ultimo_acesso else "-"}
         </div>
-        """,
+        ''',
         unsafe_allow_html=True,
     )
 
-
-# =========================================================
-# TELA CADASTRAR RELATÓRIO
-# =========================================================
 
 def tela_cadastrar_relatorio():
     topo_app()
@@ -1122,11 +1027,7 @@ def tela_cadastrar_relatorio():
     )
     st.session_state[chave_alunos] = alunos_selecionados
 
-    texto_relatorio = st.text_area(
-        "Relatório",
-        height=220,
-        placeholder="Escreva aqui o relatório da monitoria...",
-    )
+    texto_relatorio = st.text_area("Relatório", height=220, placeholder="Escreva aqui o relatório da monitoria...")
 
     if st.button("Salvar relatório"):
         ok, mensagem = salvar_relatorio(
@@ -1147,10 +1048,6 @@ def tela_cadastrar_relatorio():
 
     st.markdown("</div>", unsafe_allow_html=True)
 
-
-# =========================================================
-# TELA CONSULTAR RELATÓRIOS
-# =========================================================
 
 def tela_consultar(df_relatorios):
     topo_app()
@@ -1191,22 +1088,10 @@ def tela_consultar(df_relatorios):
 
     if usar_filtro_data:
         c4, c5 = st.columns(2)
-
         with c4:
-            data_ini = st.date_input(
-                "Data inicial",
-                value=date.today(),
-                format="DD/MM/YYYY",
-                key="data_ini_consulta",
-            )
-
+            data_ini = st.date_input("Data inicial", value=date.today(), format="DD/MM/YYYY", key="data_ini_consulta")
         with c5:
-            data_fim = st.date_input(
-                "Data final",
-                value=date.today(),
-                format="DD/MM/YYYY",
-                key="data_fim_consulta",
-            )
+            data_fim = st.date_input("Data final", value=date.today(), format="DD/MM/YYYY", key="data_fim_consulta")
     else:
         data_ini = None
         data_fim = None
@@ -1222,13 +1107,7 @@ def tela_consultar(df_relatorios):
         data_fim=data_fim,
     )
 
-    filtros_texto = gerar_texto_filtros_utilizados(
-        turma_filtro,
-        aluno_filtro,
-        monitor_filtro,
-        data_ini,
-        data_fim,
-    )
+    filtros_texto = gerar_texto_filtros_utilizados(turma_filtro, aluno_filtro, monitor_filtro, data_ini, data_fim)
 
     st.markdown('<div class="card-dark">', unsafe_allow_html=True)
     st.markdown(f"**Total encontrado:** {len(df_filtrado)} relatório(s)")
@@ -1293,10 +1172,7 @@ def tela_consultar(df_relatorios):
         st.markdown('<div class="card-dark">', unsafe_allow_html=True)
 
         if st.session_state.modo_exclusao:
-            marcado = st.checkbox(
-                "Selecionar para excluir",
-                key=f"excluir_relatorio_{idx}",
-            )
+            marcado = st.checkbox("Selecionar para excluir", key=f"excluir_relatorio_{idx}")
             if marcado:
                 indices_para_excluir.append(idx)
 
@@ -1325,10 +1201,6 @@ def tela_consultar(df_relatorios):
                 st.error(mensagem)
 
 
-# =========================================================
-# EXECUÇÃO PRINCIPAL
-# =========================================================
-
 registrar_acesso()
 
 if not st.session_state.autenticado:
@@ -1345,3 +1217,4 @@ elif pagina == "cadastrar_relatorio":
     tela_cadastrar_relatorio()
 elif pagina == "consultar":
     tela_consultar(df_relatorios)
+
