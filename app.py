@@ -453,7 +453,6 @@ def conectar_google_sheets():
     planilha = client.open_by_key(obter_id_planilha(ID_PLANILHA))
 
     obter_ou_criar_aba(planilha, "relatorios", COLUNAS_RELATORIOS)
-    obter_ou_criar_aba(planilha, "acessos", COLUNAS_ACESSOS)
 
     return planilha
 
