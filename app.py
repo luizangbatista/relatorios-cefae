@@ -797,8 +797,8 @@ def gerar_docx_relatorios(df, filtros_texto):
     doc = Document()
 
     sec = doc.sections[0]
-    sec.top_margin = Pt(127.56)
-    sec.bottom_margin = Pt(113.4)
+    sec.top_margin = Pt(42.52)
+    sec.bottom_margin = Pt(42.52)
     sec.left_margin = Pt(42.52)
     sec.right_margin = Pt(42.52)
 
@@ -806,13 +806,28 @@ def gerar_docx_relatorios(df, filtros_texto):
     estilo_normal.font.name = "Calibri"
     estilo_normal.font.size = Pt(11)
 
+    p_titulo = doc.add_paragraph()
+    p_titulo.alignment = 1
+    p_titulo.paragraph_format.space_after = Pt(6)
+
+    r_titulo = p_titulo.add_run("RELATÓRIOS CEFAE - Arquivo editável")
+    r_titulo.bold = True
+    r_titulo.font.name = "Calibri"
+    r_titulo.font.size = Pt(14)
+
     if filtros_texto:
         p_filtros = doc.add_paragraph()
         p_filtros.alignment = 1
         p_filtros.paragraph_format.line_spacing = 1.5
+        p_filtros.paragraph_format.space_after = Pt(14)
+
         r_filtros = p_filtros.add_run(filtros_texto)
         r_filtros.font.name = "Calibri"
         r_filtros.font.size = Pt(11)
+        r_filtros.italic = True
+    else:
+        p_espaco = doc.add_paragraph()
+        p_espaco.paragraph_format.space_after = Pt(14)
 
     if df.empty:
         p = doc.add_paragraph()
