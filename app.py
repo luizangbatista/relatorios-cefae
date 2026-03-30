@@ -1,5 +1,6 @@
 import io
 import os
+import re
 from datetime import date, datetime
 
 import gspread
@@ -388,27 +389,73 @@ def dataframe_alunos_fixo():
     return pd.DataFrame(linhas, columns=COLUNAS_ALUNOS)
 
 
-def conectar_google_sheets():
-    if ID_PLANILHA == "COLE_AQUI_O_ID_DA_PLANILHA":
-        raise ValueError("Preencha o ID_PLANILHA com o ID da sua planilha do Google Sheets.")
+def obter_id_planilha(valor):
+    valor = str(valor or "").strip()
+
+    if not valor or valor == "COLE_AQUI_O_ID_DA_PLANILHA":
+        raise ValueError("Preencha o ID_PLANILHA com o ID ou a URL da sua planilha do Google Sheets.")
+
+    correspondencia = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", valor)
+    if correspondencia:
+        return correspondencia.group(1)
+
+    if re.fullmatch(r"[a-zA-Z0-9-_]{20,}", valor):
+        return valor
+
+    raise ValueError("ID_PLANILHA inválido. Use apenas o ID da planilha ou a URL completa do Google Sheets.")
+
+
+def obter_credenciais_google():
+    if "gcp_service_account" not in st.secrets:
+        raise KeyError(
+            "Credenciais do Google não encontradas no Streamlit Secrets. "
+            "Adicione a seção [gcp_service_account] no arquivo secrets.toml."
+        )
+
+    info = dict(st.secrets["gcp_service_account"])
+
+    chave_privada = str(info.get("private_key", "")).strip()
+    if not chave_privada or "sua chave aqui" in chave_privada.lower():
+        raise ValueError(
+            "A private_key do service account está vazia ou é apenas um placeholder. "
+            "Cole a chave JSON real no secrets.toml."
+        )
+
+    info["private_key"] = chave_privada.replace("\\n", "\n")
 
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive",
     ]
+    return Credentials.from_service_account_info(info, scopes=scopes)
 
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=scopes,
-    )
 
+def obter_ou_criar_aba(planilha, nome_aba, colunas):
+    try:
+        aba = planilha.worksheet(nome_aba)
+    except gspread.WorksheetNotFound:
+        aba = planilha.add_worksheet(title=nome_aba, rows=max(100, len(colunas) + 5), cols=max(10, len(colunas) + 2))
+
+    valores = aba.get_all_values()
+    cabecalho_atual = valores[0] if valores else []
+
+    if cabecalho_atual != colunas:
+        conteudo_existente = valores[1:] if valores else []
+        aba.clear()
+        aba.update("A1", [colunas] + conteudo_existente)
+
+    return aba
+
+
+def conectar_google_sheets():
+    creds = obter_credenciais_google()
     client = gspread.authorize(creds)
-    return client.open_by_key(ID_PLANILHA)
+    planilha = client.open_by_key(obter_id_planilha(ID_PLANILHA))
 
-st.write("Tem secrets?", "gcp_service_account" in st.secrets)
-st.write("Project ID:", st.secrets["gcp_service_account"]["project_id"])
-st.write("Client email:", st.secrets["gcp_service_account"]["client_email"])
-st.write("Private key começa com:", st.secrets["gcp_service_account"]["private_key"][:30])
+    obter_ou_criar_aba(planilha, "relatorios", COLUNAS_RELATORIOS)
+    obter_ou_criar_aba(planilha, "acessos", COLUNAS_ACESSOS)
+
+    return planilha
 
 def carregar_relatorios():
     planilha = conectar_google_sheets()
@@ -491,13 +538,16 @@ def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
     try:
         planilha = conectar_google_sheets()
         aba = planilha.worksheet("relatorios")
-        aba.append_row([
-            data_relatorio.strftime("%Y-%m-%d"),
-            turma,
-            monitor,
-            alunos_texto,
-            texto_relatorio,
-        ])
+        aba.append_row(
+            [
+                data_relatorio.strftime("%Y-%m-%d"),
+                turma,
+                monitor,
+                alunos_texto,
+                texto_relatorio,
+            ],
+            value_input_option="USER_ENTERED",
+        )
         return True, "Relatório salvo com sucesso."
     except Exception as e:
         return False, f"Erro ao salvar: {str(e)}"
@@ -592,7 +642,10 @@ def deletar_relatorios(df_filtrado, indices_filtrados):
         aba.append_row(COLUNAS_RELATORIOS)
 
         if not restantes.empty:
-            aba.append_rows(restantes[COLUNAS_RELATORIOS].values.tolist())
+            aba.append_rows(
+                restantes[COLUNAS_RELATORIOS].values.tolist(),
+                value_input_option="USER_ENTERED",
+            )
 
         return True, f"{len(indices_filtrados)} relatório(s) excluído(s) com sucesso."
     except Exception as e:
@@ -1221,4 +1274,3 @@ elif pagina == "cadastrar_relatorio":
     tela_cadastrar_relatorio()
 elif pagina == "consultar":
     tela_consultar(df_relatorios)
-
