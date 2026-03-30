@@ -33,7 +33,7 @@ ID_PLANILHA = "1m6zSOCCcV-Dz7BKBrEaHk77Vlq2AOyqLlh6adqDAXQY"
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
 COLUNAS_RELATORIOS = ["data", "turma", "monitor", "alunos", "relatorio"]
-COLUNAS_ACESSOS = ["total", "ultimo_acesso"]
+
 
 MONITORES = [
     "Arthur - Matemática",
@@ -477,48 +477,9 @@ def carregar_relatorios():
     return df.sort_values("data_dt", ascending=False).reset_index(drop=True)
 
 
-def carregar_acessos():
-    planilha = conectar_google_sheets()
-    aba = planilha.worksheet("acessos")
-    dados = aba.get_all_records()
-
-    if not dados:
-        return pd.DataFrame([{"total": 0, "ultimo_acesso": ""}], columns=COLUNAS_ACESSOS)
-
-    df = pd.DataFrame(dados)
-    for col in COLUNAS_ACESSOS:
-        if col not in df.columns:
-            df[col] = ""
-
-    df["total"] = pd.to_numeric(df["total"], errors="coerce").fillna(0).astype(int)
-    df["ultimo_acesso"] = df["ultimo_acesso"].fillna("").astype(str)
-    return df[COLUNAS_ACESSOS].copy()
-
 
 def carregar_alunos():
     return dataframe_alunos_fixo()
-
-
-def registrar_acesso():
-    if st.session_state.acesso_registrado:
-        return
-
-    try:
-        planilha = conectar_google_sheets()
-        aba = planilha.worksheet("acessos")
-        dados = aba.get_all_records()
-        agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-
-        if not dados:
-            aba.update("A2:B2", [[1, agora]])
-        else:
-            total_atual = int(dados[0].get("total", 0) or 0)
-            aba.update("A2:B2", [[total_atual + 1, agora]])
-
-        st.session_state.acesso_registrado = True
-    except Exception:
-        pass
-
 
 def salvar_relatorio(data_relatorio, turma, monitor, alunos, texto_relatorio):
     turma = str(turma).strip()
@@ -1013,22 +974,6 @@ def tela_home():
             st.session_state.modo_exclusao = False
             ir_para("consultar")
 
-    try:
-        df_acessos = carregar_acessos()
-        total_acessos = int(df_acessos.loc[0, "total"]) if not df_acessos.empty else 0
-        ultimo_acesso = str(df_acessos.loc[0, "ultimo_acesso"]) if not df_acessos.empty else ""
-    except Exception:
-        total_acessos = 0
-        ultimo_acesso = ""
-
-    st.markdown(
-        f'''
-        <div class="status-box">
-            <strong>Contador de acessos:</strong> {total_acessos}<br>
-            <strong>Último acesso:</strong> {ultimo_acesso if ultimo_acesso else "-"}
-        </div>
-        ''',
-        unsafe_allow_html=True,
     )
 
 
@@ -1257,8 +1202,6 @@ def tela_consultar(df_relatorios):
             else:
                 st.error(mensagem)
 
-
-registrar_acesso()
 
 if not st.session_state.autenticado:
     tela_login()
