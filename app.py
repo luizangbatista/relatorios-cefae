@@ -29,7 +29,7 @@ ARQUIVO_TIMBRADO = "timbrado.png"
 # COLE AQUI O ID DA SUA PLANILHA
 # Exemplo de URL:
 # https://docs.google.com/spreadsheets/d/1m6zSOCCcV-Dz7BKBrEaHk77Vlq2AOyqLlh6adqDAXQY/edit?usp=drivesdk
-ID_PLANILHA = "1m6zSOCCcV-Dz7BKBrEaHk77Vlq2AOyqLlh6adqDAXQY/edit?usp=drivesdk"
+ID_PLANILHA = "1m6zSOCCcV-Dz7BKBrEaHk77Vlq2AOyqLlh6adqDAXQY"
 
 COLUNAS_ALUNOS = ["turma", "aluno"]
 COLUNAS_RELATORIOS = ["data", "turma", "monitor", "alunos", "relatorio"]
