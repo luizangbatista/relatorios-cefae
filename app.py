@@ -974,7 +974,7 @@ def tela_home():
             st.session_state.modo_exclusao = False
             ir_para("consultar")
 
-    )
+
 
 
 def tela_cadastrar_relatorio():
