@@ -100,7 +100,7 @@ TURMAS_FIXAS = {
         "PEDRO HENRIQUE ALVES CRUZ",
         "GABRIELA VIEIRA CHAVES",
     ],
-    "4º - Manhã": [
+    "4º ano - Manhã": [
         "ANA VITORIA BATISTA DA SILVA",
         "EMANUELLY HELENA ALMEIDA LINO",
         "GEOVANNA SIQUEIRA DE SOUZA",
@@ -112,7 +112,7 @@ TURMAS_FIXAS = {
         "ISABELA DA CUNHA SILVA",
         "LAURA MARCELY VALENTIM",
     ],
-    "4º - Tarde": [
+    "4º ano - Tarde": [
         "ANA LUÍSA SANTOS DE JESUS",
         "ANA SOPHIA GARRIDO PÁSCOA",
         "APOLO PAIXAO NORONHA",
@@ -129,7 +129,7 @@ TURMAS_FIXAS = {
         "VALENTINA BRITO SILVA",
         "VITÓRIA E. MARTINS DOS SANTOS",
     ],
-    "5º - Tarde": [
+    "5º ano - Tarde": [
         "ALLAN GUIMARÃES",
         "ANTÔNIO CALDEIRA",
         "BEATRIZ ROMEIRO TOMAS",
@@ -144,7 +144,7 @@ TURMAS_FIXAS = {
         "MIGUEL F. BARBOSA DE CARVALHO",
         "OTAVIO PIASSI MOTTA",
     ],
-    "7º - Tarde": [
+    "7º ano - Tarde": [
         "CLARICE SOARES DA CRUZ E SILVA",
         "ESTHER VIEIRA SANTOS ARAÚJO",
         "GABRIEL FRANCISCO SOUZA",
@@ -157,7 +157,7 @@ TURMAS_FIXAS = {
         "SOPHIA RESENDE DE OLIVEIRA",
         "VITÓRIA SANTANA RIBEIRO LOMASSO",
     ],
-    "8º - Tarde": [
+    "8º ano - Tarde": [
         "ANA IZABEL RIBEIRO DE MELO",
         "DAVI DE MELO ALVES",
         "GABRIELLA SOUSA DAMAZIO",
@@ -168,7 +168,7 @@ TURMAS_FIXAS = {
         "LUIZA MARTINS COSTA MENDONÇA",
         "MARIA EDUARDA VALÉRIO COSTA",
     ],
-    "9º - Tarde": [
+    "9º ano - Tarde": [
         "ARTHUR CÉSAR VIEIRA",
         "BRUNA PAULA DE ALMIEDA",
         "CLARA ROCHA DE CARVALHO MARTINS",
