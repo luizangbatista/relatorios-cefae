@@ -90,7 +90,7 @@ TURMAS_FIXAS = {
         "PEROLA GONÇALVES OLIVEIRA",
         "VITÓRIA EMANUELE BARBOSA DO ROSÁRIO",
     ],
-    "5º manhã": [
+    "5º ano - Manhã": [
         "ANA LUIZA EZEQUIEL LIMA",
         "HELENA FERNANDES VIEIRA",
         "JESSICA EMANUELLY G. DE OLIVEIRA",
@@ -100,7 +100,7 @@ TURMAS_FIXAS = {
         "PEDRO HENRIQUE ALVES CRUZ",
         "GABRIELA VIEIRA CHAVES",
     ],
-    "4º manhã": [
+    "4º - Manhã": [
         "ANA VITORIA BATISTA DA SILVA",
         "EMANUELLY HELENA ALMEIDA LINO",
         "GEOVANNA SIQUEIRA DE SOUZA",
@@ -112,7 +112,7 @@ TURMAS_FIXAS = {
         "ISABELA DA CUNHA SILVA",
         "LAURA MARCELY VALENTIM",
     ],
-    "4º ano tarde": [
+    "4º - Tarde": [
         "ANA LUÍSA SANTOS DE JESUS",
         "ANA SOPHIA GARRIDO PÁSCOA",
         "APOLO PAIXAO NORONHA",
@@ -129,7 +129,7 @@ TURMAS_FIXAS = {
         "VALENTINA BRITO SILVA",
         "VITÓRIA E. MARTINS DOS SANTOS",
     ],
-    "5º tarde": [
+    "5º - Tarde": [
         "ALLAN GUIMARÃES",
         "ANTÔNIO CALDEIRA",
         "BEATRIZ ROMEIRO TOMAS",
@@ -144,7 +144,7 @@ TURMAS_FIXAS = {
         "MIGUEL F. BARBOSA DE CARVALHO",
         "OTAVIO PIASSI MOTTA",
     ],
-    "7º tarde": [
+    "7º - Tarde": [
         "CLARICE SOARES DA CRUZ E SILVA",
         "ESTHER VIEIRA SANTOS ARAÚJO",
         "GABRIEL FRANCISCO SOUZA",
@@ -157,7 +157,7 @@ TURMAS_FIXAS = {
         "SOPHIA RESENDE DE OLIVEIRA",
         "VITÓRIA SANTANA RIBEIRO LOMASSO",
     ],
-    "8º tarde": [
+    "8º - Tarde": [
         "ANA IZABEL RIBEIRO DE MELO",
         "DAVI DE MELO ALVES",
         "GABRIELLA SOUSA DAMAZIO",
@@ -168,7 +168,7 @@ TURMAS_FIXAS = {
         "LUIZA MARTINS COSTA MENDONÇA",
         "MARIA EDUARDA VALÉRIO COSTA",
     ],
-    "9º tarde": [
+    "9º - Tarde": [
         "ARTHUR CÉSAR VIEIRA",
         "BRUNA PAULA DE ALMIEDA",
         "CLARA ROCHA DE CARVALHO MARTINS",
@@ -183,7 +183,7 @@ TURMAS_FIXAS = {
         "SOPHIA VITORIA PEREIRA SANTOS",
         "YASMIN CALDEIRA COSTA",
     ],
-    "1ª série EM": [
+    "1ª série - EM": [
         "ARTHUR FÉLIX RIBEIRO",
         "ARTHUR VIEIRA DE SOUZA BENTO",
         "BRENO HENRIQUE EUFRAZIO DE SOUZA",
@@ -201,7 +201,7 @@ TURMAS_FIXAS = {
         "MIGUEL KAIROS FELISBERTO AMORIM",
         "SARAH E. DE MORAIS SANTANA",
     ],
-    "2ª série EM": [
+    "2ª série - EM": [
         "DAVI RAFAEL BORGES LOPES",
         "LUDMILA SANTANA LOMASSO",
         "MARIANA SANTOS",
